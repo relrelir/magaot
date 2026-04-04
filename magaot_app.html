@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>טבלת המגירות</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; }
+  .tab-btn { transition: all .2s; border-bottom: 3px solid transparent; }
+  .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 700; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  .badge-monthly { background:#d1fae5; color:#065f46; }
+  .badge-periodic { background:#fef3c7; color:#92400e; }
+  tr:hover td { background: #f8fafc; }
+  .override-active { outline: 2px solid #2563eb !important; }
+  input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#2563eb; }
+  .data-note { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px; padding:8px 14px; font-size:.82rem; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .sticky-bar { position:sticky; bottom:0; background:white; border-top:2px solid #e2e8f0; padding:12px 20px; z-index:5; box-shadow: 0 -4px 12px rgba(0,0,0,.06); }
+  .inline-edit { border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; width:90px; font-size:.85rem; text-align:left; }
+  .inline-edit:focus { outline:2px solid #3b82f6; border-color:transparent; }
+  .result-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+  .sub-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0 5px 24px; color:#64748b; font-size:.88rem; }
+  .grand-row { background:#f0fdf4; border-radius:10px; padding:14px 16px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; }
+  @media(max-width:640px){ .hide-mobile { display:none; } }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<header class="bg-white shadow-sm sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-800">טבלת המגירות</h1>
+      <p class="text-xs text-slate-400">נתונים: יולי 2025 – מרץ 2026 (9 חודשים מלאים)</p>
+    </div>
+  </div>
+  <div class="max-w-5xl mx-auto px-4 flex gap-0 border-t border-slate-100 overflow-x-auto">
+    <button class="tab-btn active px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('income',this)">💰 מגירת הכנסות</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('fixed',this)">📌 הוצאות קבועות</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('goals',this)">🏦 פקדונות ויעדים</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('dashboard',this)">📊 טבלת המגירות</button>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-6">
+
+<!-- TAB 1: INCOME -->
+<div id="tab-income" class="tab-pane active">
+  <div class="data-note">ℹ️ סמן/בטל צ'קבוקסים כדי לכלול/לנטרל עסקאות מחישוב הממוצע. שדה "דריסה" מאפשר הזנה ידנית.</div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+      <h2 class="font-semibold text-slate-700">כל ההכנסות — 9 חודשים</h2>
+      <div class="flex gap-3">
+        <button onclick="checkAllIncome(true)" class="text-xs text-blue-600 hover:underline">סמן הכל</button>
+        <span class="text-slate-300">|</span>
+        <button onclick="checkAllIncome(false)" class="text-xs text-blue-600 hover:underline">בטל הכל</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-slate-500 text-xs">
+            <th class="px-3 py-2 text-right w-10">כלול</th>
+            <th class="px-3 py-2 text-right">תאריך</th>
+            <th class="px-3 py-2 text-right">תיאור</th>
+            <th class="px-3 py-2 text-right hide-mobile">קטגוריה</th>
+            <th class="px-3 py-2 text-right hide-mobile">חודש</th>
+            <th class="px-3 py-2 text-left">סכום ₪</th>
+          </tr>
+        </thead>
+        <tbody id="income-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex flex-wrap gap-4 items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-400 mb-1">ממוצע חודשי מחושב</div>
+        <div id="income-avg-display" class="text-2xl font-bold text-green-700">₪0</div>
+        <div id="income-avg-note" class="text-xs text-slate-400 mt-0.5"></div>
+      </div>
+      <div class="flex-1 max-w-xs">
+        <label class="text-xs text-slate-400 block mb-1">דריסה ידנית — הכנסה לחישוב במגירות</label>
+        <div class="flex gap-2 items-center">
+          <input type="number" id="income-override" placeholder="הזן סכום..."
+            class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+            oninput="onIncomeOverride()">
+          <button onclick="clearIncomeOverride()" class="text-slate-400 hover:text-red-500 text-lg transition leading-none">✕</button>
+        </div>
+        <div id="income-final-display" class="text-xs text-blue-600 mt-1 font-medium"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: FIXED -->
+<div id="tab-fixed" class="tab-pane">
+  <div class="data-note">ℹ️ הוצאות שזוהו כחוזרות (2+ חודשים). "חודשי שוטף" = חיוב כל חודש. "תקופתי נצבר" = הפרש חודשי למגירה. ערוך סכום בכל שורה לפי שיקולך.</div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+      <h2 class="font-semibold text-slate-700">הוצאות חוזרות מזוהות — <span id="fixed-count">0</span> פריטים</h2>
+      <div class="flex gap-3">
+        <button onclick="checkAllFixed(true)" class="text-xs text-blue-600 hover:underline">סמן הכל</button>
+        <span class="text-slate-300">|</span>
+        <button onclick="checkAllFixed(false)" class="text-xs text-blue-600 hover:underline">בטל הכל</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-slate-500 text-xs">
+            <th class="px-3 py-2 text-right w-10">כלול</th>
+            <th class="px-3 py-2 text-right">ספק / תיאור</th>
+            <th class="px-3 py-2 text-right hide-mobile">קטגוריה</th>
+            <th class="px-3 py-2 text-right hide-mobile">תדירות</th>
+            <th class="px-3 py-2 text-right hide-mobile">חודשים</th>
+            <th class="px-3 py-2 text-right">סוג</th>
+            <th class="px-3 py-2 text-left">₪/חודש</th>
+          </tr>
+        </thead>
+        <tbody id="fixed-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex flex-wrap gap-6 items-center justify-between">
+      <div class="flex flex-wrap gap-6">
+        <div>
+          <div class="text-xs text-slate-400 mb-0.5">סה"כ קבועות נבחרות</div>
+          <div id="fixed-total-display" class="text-xl font-bold text-red-700">₪0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-0.5">חודשי שוטף</div>
+          <div id="fixed-monthly-display" class="text-lg font-semibold text-slate-600">₪0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-0.5">נצבר למגירה</div>
+          <div id="fixed-periodic-display" class="text-lg font-semibold text-amber-600">₪0</div>
+        </div>
+      </div>
+      <div class="flex-1 max-w-xs">
+        <label class="text-xs text-slate-400 block mb-1">דריסה ידנית — סה"כ הוצאות קבועות</label>
+        <div class="flex gap-2 items-center">
+          <input type="number" id="fixed-override" placeholder="הזן סכום..."
+            class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+            oninput="onFixedOverride()">
+          <button onclick="clearFixedOverride()" class="text-slate-400 hover:text-red-500 text-lg transition leading-none">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: GOALS -->
+<div id="tab-goals" class="tab-pane">
+  <div class="data-note">ℹ️ הגדר כמה כסף לשים בצד כל חודש לכל מטרה. אינו מחובר ל-RiseUp — הזנה ידנית בלבד.</div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="font-semibold text-slate-700">פקדונות, חסכונות ויעדים</h2>
+      <button onclick="addGoal()" class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-blue-700 transition">+ הוסף יעד</button>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-slate-50 text-slate-500 text-xs">
+          <th class="px-4 py-2 text-right">שם היעד</th>
+          <th class="px-4 py-2 text-left">סכום חודשי ₪</th>
+          <th class="px-4 py-2 text-center w-12"></th>
+        </tr>
+      </thead>
+      <tbody id="goals-tbody">
+        <tr><td colspan="3" class="text-center text-slate-300 py-10 text-sm">לחץ "+ הוסף יעד" כדי להתחיל</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div>
+      <div class="text-xs text-slate-400 mb-0.5">סה"כ הפרשה חודשית לפקדונות ויעדים</div>
+      <div id="goals-total-display" class="text-2xl font-bold text-blue-700">₪0</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: DASHBOARD -->
+<div id="tab-dashboard" class="tab-pane">
+  <div class="data-note">ℹ️ תמונת התזרים המלאה — מחושבת מכל הטאבים. כל שינוי בטאבים 1–3 מתעדכן כאן מיידית.</div>
+  <div class="bg-white rounded-xl shadow-sm p-6 max-w-2xl mx-auto">
+    <h2 class="font-bold text-slate-700 text-lg mb-6 pb-3 border-b border-slate-100">מגירות — תמונה מלאה</h2>
+    <div class="result-row">
+      <span class="font-semibold text-slate-700">💰 הכנסה חודשית</span>
+      <span class="font-bold text-xl text-green-700" id="dash-income">₪0</span>
+    </div>
+    <div class="result-row mt-1">
+      <span class="font-semibold text-slate-700">📌 פחות: הוצאות קבועות</span>
+      <span class="font-bold text-xl text-red-600" id="dash-fixed">₪0</span>
+    </div>
+    <div class="sub-row">
+      <span>⬦ חיוב חודשי שוטף</span>
+      <span class="font-medium text-slate-600" id="dash-fixed-monthly">₪0</span>
+    </div>
+    <div class="sub-row mb-2">
+      <span>💼 נצבר למגירה (הפרשה לעתיד)</span>
+      <span class="font-medium text-amber-600" id="dash-fixed-periodic">₪0</span>
+    </div>
+    <div class="result-row" style="border-bottom:2px solid #e2e8f0; padding-bottom:14px;">
+      <span class="text-slate-500 text-sm">נשאר אחרי קבועות</span>
+      <span class="font-semibold text-slate-600" id="dash-after-fixed">₪0</span>
+    </div>
+    <div class="result-row mt-2">
+      <span class="font-semibold text-slate-700">🏦 פחות: פקדונות ויעדים</span>
+      <span class="font-bold text-xl text-blue-600" id="dash-goals">₪0</span>
+    </div>
+    <div class="border-t-2 border-slate-200 my-4"></div>
+    <div class="grand-row">
+      <div>
+        <div class="font-bold text-green-800 text-base" id="dash-free-label">🛒 מגירת הבזבוזים</div>
+        <div class="text-xs text-green-700 mt-1">הכסף הפנוי לחיים השוטפים</div>
+      </div>
+      <span class="font-black text-2xl text-green-800" id="dash-free">₪0</span>
+    </div>
+    <div class="mt-4 bg-slate-50 rounded-xl p-4">
+      <div class="text-xs text-slate-400 mb-3 font-semibold uppercase tracking-wide">פירוט נוסף</div>
+      <div class="grid grid-cols-3 gap-4 text-sm">
+        <div class="text-center">
+          <div class="text-slate-400 text-xs mb-1">ליום (÷30)</div>
+          <div class="font-semibold text-slate-700" id="dash-per-day">₪0</div>
+        </div>
+        <div class="text-center">
+          <div class="text-slate-400 text-xs mb-1">לשבוע (÷4.33)</div>
+          <div class="font-semibold text-slate-700" id="dash-per-week">₪0</div>
+        </div>
+        <div class="text-center">
+          <div class="text-slate-400 text-xs mb-1">% חיסכון</div>
+          <div class="font-semibold text-slate-700" id="dash-savings-pct">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+var INCOME_DATA = [{"id":"db6be643-561c-11f0-bee7-e1eb79b8a9eb","date":"2025-07-01","desc":"משכורת משרד החינוך","amount":6338.42,"cat":"משכורת","src":"YahavBank","month":"2025-07"},{"id":"b88edd41-57ab-11f0-b645-3b0f7d247036","date":"2025-07-02","desc":"בינלאומי חותם ד.ד הנד (מחותם הנדסה","amount":17700,"cat":"העברות","src":"YahavBank","month":"2025-07"},{"id":"b74c2811-5c61-11f0-8e76-53ccedc8bbfb","date":"2025-07-09","desc":"משכורת העמותה לקידום ה","amount":1353.8,"cat":"משכורת","src":"YahavBank","month":"2025-07"},{"id":"5006ee35-611e-11f0-8914-5b750d9737ca","date":"2025-07-14","desc":"ב.הפועלים-ביט אריאל רוזנבר לחשבון הבנק","amount":663.5,"cat":"העברות","src":"YahavBank","month":"2025-07"},{"id":"6c643de6-61e1-11f0-ade2-b3d4138b5ff0","date":"2025-07-15","desc":"הפועלים פרו סרוס בע\" 0006","amount":3407,"cat":"כללי","src":"YahavBank","month":"2025-07"},{"id":"6c643de7-61e1-11f0-ade2-b3d4138b5ff0","date":"2025-07-15","desc":"הפועלים פרו סרוס בע\" 0004+0005","amount":27885,"cat":"כללי","src":"YahavBank","month":"2025-07"},{"id":"170ab5b4-6257-11f0-9080-61b4e51183cb","date":"2025-07-16","desc":"הפקדת שיק","amount":4000,"cat":"שיק","src":"YahavBank","month":"2025-07"},{"id":"270f5217-6506-11f0-b721-c7d06cbb93b5","date":"2025-07-20","desc":"קצבת ילדים","amount":426,"cat":"קצבאות","src":"YahavBank","month":"2025-07"},{"id":"4185e02a-6a86-11f0-94c7-250e4a7342fd","date":"2025-07-25","desc":"ב.הפועלים-ביט אריאל רוזנבר לחשבון הבנק","amount":2940,"cat":"העברות","src":"YahavBank","month":"2025-07"},{"id":"1ec1841a-6eda-11f0-bada-9d45646cccc8","date":"2025-07-30","desc":"מנחם צעצועי מורן-צמרת","amount":19,"cat":"קניות","src":"leumicard","month":"2025-07"},{"id":"2112895a-6e74-11f0-aeae-bd48b1868ca1","date":"2025-07-31","desc":"ריבית זכות","amount":15.9,"cat":"כללי","src":"YahavBank","month":"2025-07"},{"id":"9f69298d-7135-11f0-b342-a16fff8cc468","date":"2025-07-31","desc":"פטור והנחה מדמי כרטיס","amount":17.9,"cat":"עמלות","src":"leumicard","month":"2025-08"},{"id":"21128959-6e74-11f0-aeae-bd48b1868ca1","date":"2025-08-01","desc":"משכורת משרד החינוך","amount":5726.01,"cat":"משכורת","src":"YahavBank","month":"2025-08"},{"id":"65f81ee2-7199-11f0-a154-add9f3dabdb8","date":"2025-08-04","desc":"בינלאומי חותם ד.ד הנד (מחותם הנדסה","amount":17700,"cat":"העברות","src":"YahavBank","month":"2025-08"},{"id":"1bdc485a-7265-11f0-9ba0-f3971cffae3b","date":"2025-08-05","desc":"ב.הפועלים-ביט ניצה אילה אז להולדת הבן","amount":250,"cat":"העברות","src":"YahavBank","month":"2025-08"},{"id":"be7d1be0-7330-11f0-9b04-039b428438e4","date":"2025-08-06","desc":"הפועלים פרו סרוס בע\" 0007","amount":738,"cat":"כללי","src":"YahavBank","month":"2025-08"},{"id":"be7ddf32-7330-11f0-9b04-039b428438e4","date":"2025-08-06","desc":"ב.הפועלים-ביט רון הבא צהרון","amount":400,"cat":"העברות","src":"YahavBank","month":"2025-08"},{"id":"1a677af0-73cb-11f0-8dcf-d9304ec6485e","date":"2025-08-07","desc":"הפועלים פרו סרוס בע\" חוגי 008+הייחש","amount":27000,"cat":"כללי","src":"YahavBank","month":"2025-08"},{"id":"102106c1-7587-11f0-9968-8948d8dc4ac9","date":"2025-08-08","desc":"משכורת העמותה לקידום ה","amount":1035.59,"cat":"משכורת","src":"YahavBank","month":"2025-08"},{"id":"12a7cd01-7719-11f0-8b50-f779d5dc9419","date":"2025-08-11","desc":"לאומי שבות מרים לא תשלום","amount":2000,"cat":"כללי","src":"YahavBank","month":"2025-08"},{"id":"12a7cd02-7719-11f0-8b50-f779d5dc9419","date":"2025-08-11","desc":"הפועלים פרו סרוס בע\" ' 0010","amount":2448.5,"cat":"כללי","src":"YahavBank","month":"2025-08"},{"id":"12a7cd00-7719-11f0-8b50-f779d5dc9419","date":"2025-08-12","desc":"בטוח לאומי חד פ","amount":616,"cat":"קצבאות","src":"YahavBank","month":"2025-08"},{"id":"1fe1de41-7848-11f0-b68e-af2af476a2c9","date":"2025-08-13","desc":"הפקדת שיק","amount":4000,"cat":"שיק","src":"YahavBank","month":"2025-08"},{"id":"53011471-7911-11f0-9b0c-038e062e9d83","date":"2025-08-14","desc":"משיכה מפקדון סניף","amount":4317,"cat":"משיכת פיקדון","src":"YahavBank","month":"2025-08"},{"id":"53011473-7911-11f0-9b0c-038e062e9d83","date":"2025-08-14","desc":"ריבית","amount":1.37,"cat":"כללי","src":"YahavBank","month":"2025-08"},{"id":"0feee1d4-797a-11f0-8d0a-37a7d2c7ce89","date":"2025-08-15","desc":"בטוח לאומי חד פ","amount":17812,"cat":"קצבאות","src":"YahavBank","month":"2025-08"},{"id":"daf9bc8b-7b08-11f0-8e9d-838fa6eae55e","date":"2025-08-17","desc":"בטוח לאומי חד פ","amount":10884,"cat":"קצבאות","src":"YahavBank","month":"2025-08"},{"id":"0cfad765-7d65-11f0-8e38-47fc9bcbfbe0","date":"2025-08-20","desc":"קצבת ילדים","amount":640,"cat":"קצבאות","src":"YahavBank","month":"2025-08"},{"id":"807685b9-7e2b-11f0-aa2e-af442409f1bf","date":"2025-08-20","desc":"העברה בן זנו פנח רוזנברגר א","amount":160000,"cat":"העברות","src":"YahavBank","month":"2025-08"},{"id":"3fe22b70-8412-11f0-bfa8-8b6390b8f11f","date":"2025-08-21","desc":"הכל כאן סופרמרקט","amount":1.7,"cat":"כלכלה","src":"leumicard","month":"2025-08"},{"id":"35025c53-827f-11f0-8759-67b789e92f41","date":"2025-08-22","desc":"דמי כרטיס /הנפקה","amount":17.9,"cat":"כללי","src":"isracard","month":"2025-08"},{"id":"3502f89e-827f-11f0-8759-67b789e92f41","date":"2025-08-22","desc":"דמי כרטיס /הנפקה","amount":17.9,"cat":"כללי","src":"isracard","month":"2025-08"},{"id":"e2f93690-8152-11f0-a106-45a327c22d34","date":"2025-08-24","desc":"מיטב טרייד בע\"מ","amount":12,"cat":"השקעה וחיסכון","src":"YahavBank","month":"2025-08"},{"id":"d94b1103-822d-11f0-8cd7-5fbd720914e4","date":"2025-08-26","desc":"בטוח לאומי חד פ","amount":5100,"cat":"קצבאות","src":"YahavBank","month":"2025-08"},{"id":"ba05a2f4-8607-11f0-afd0-17b30e7b0de5","date":"2025-08-29","desc":"מס-הכנסה החזרים","amount":6599,"cat":"מס הכנסה","src":"YahavBank","month":"2025-08"},{"id":"77b27649-87ff-11f0-81d3-237f62adbf14","date":"2025-08-31","desc":"פטור והנחה מדמי כרטיס","amount":15.59,"cat":"עמלות","src":"leumicard","month":"2025-09"},{"id":"3ebc76e5-86d5-11f0-8be0-0b0502ee9edc","date":"2025-09-01","desc":"משכורת משרד החינוך","amount":4582.42,"cat":"משכורת","src":"YahavBank","month":"2025-09"},{"id":"df39b4c7-892d-11f0-9fd1-39d4e06dff52","date":"2025-09-03","desc":"בינלאומי חותם ד.ד הנד ( (הערת 08חוקל","amount":17700,"cat":"כללי","src":"YahavBank","month":"2025-09"},{"id":"3a0b4bbb-8b87-11f0-9c9f-a5b705e9b3bb","date":"2025-09-05","desc":"FAMOUS.AI USAGE          ","amount":165.61,"cat":"כללי","src":"americanexpress","month":"2025-09"},{"id":"3a0b4bbc-8b87-11f0-9c9f-a5b705e9b3bb","date":"2025-09-05","desc":"FAMOUS.AI                ","amount":40.35,"cat":"כללי","src":"americanexpress","month":"2025-09"},{"id":"66a68a61-8c53-11f0-8f0b-892bdd47fb28","date":"2025-09-06","desc":"LOVABLE                  ","amount":169.24,"cat":"כללי","src":"americanexpress","month":"2025-09"},{"id":"66a6b160-8c53-11f0-8f0b-892bdd47fb28","date":"2025-09-06","desc":"LOVABLE                  ","amount":169.24,"cat":"כללי","src":"americanexpress","month":"2025-09"},{"id":"88778b4e-8d19-11f0-8e7a-5f3dea43e3df","date":"2025-09-09","desc":"משכורת העמותה לקידום ה","amount":775.39,"cat":"משכורת","src":"YahavBank","month":"2025-09"},{"id":"19c5843a-8fdb-11f0-82e9-c5940ecdc3c9","date":"2025-09-12","desc":"הפקדת שיק","amount":4000,"cat":"שיק","src":"YahavBank","month":"2025-09"},{"id":"eb8a68c1-9362-11f0-997e-71ebb3fe1432","date":"2025-09-17","desc":"קצבת ילדים","amount":583,"cat":"קצבאות","src":"YahavBank","month":"2025-09"},{"id":"79be6eb5-a070-11f0-bb02-63704a59287a","date":"2025-09-29","desc":"פטור והנחה מדמי כרטיס","amount":16.11,"cat":"עמלות","src":"leumicard","month":"2025-10"},{"id":"ac68cf21-a19e-11f0-8f7c-55d31430055f","date":"2025-10-03","desc":"בינלאומי חותם ד.ד הנד ( (הערת 09חוקל","amount":17700,"cat":"כללי","src":"YahavBank","month":"2025-10"},{"id":"1ab87659-a2cc-11f0-8252-75f4abbc3a8b","date":"2025-10-05","desc":"אגוש-מבית הסת המורים","amount":518,"cat":"תרומה","src":"isracard","month":"2025-10"},{"id":"27e3be96-a57c-11f0-8eea-2f5958bba4cd","date":"2025-10-09","desc":"הפועלים מימון יצחק תשלום שכר דירה","amount":4300,"cat":"משכורת","src":"YahavBank","month":"2025-10"},{"id":"3cfa02a8-ab01-11f0-9b09-d5eaaa78f51d","date":"2025-10-16","desc":"הפועלים פרו סרוס בע\" 2025","amount":21850.5,"cat":"כללי","src":"YahavBank","month":"2025-10"},{"id":"de9a4a74-ad5e-11f0-9f80-279792589248","date":"2025-10-20","desc":"קצבת ילדים","amount":583,"cat":"קצבאות","src":"YahavBank","month":"2025-10"},{"id":"e0f70757-b47e-11f0-b3f9-f5093646ee92","date":"2025-10-28","desc":"bit ב.הפועלים-ביט אייר רוזנברג","amount":773.5,"cat":"העברות","src":"YahavBank","month":"2025-10"},{"id":"e0f70758-b47e-11f0-b3f9-f5093646ee92","date":"2025-10-28","desc":"החזרה","amount":1038,"cat":"זיכויים","src":"YahavBank","month":"2025-10"},{"id":"4505c37d-b606-11f0-bcc2-d56acc62891d","date":"2025-10-31","desc":"בטוח לאומי חד פ","amount":4275,"cat":"קצבאות","src":"YahavBank","month":"2025-10"},{"id":"ed1b4fb2-b806-11f0-a06f-0df3552ce31a","date":"2025-10-30","desc":"פטור והנחה מדמי כרטיס","amount":17.9,"cat":"עמלות","src":"leumicard","month":"2025-11"},{"id":"3f2adf3f-b7a0-11f0-aa4c-1b01bf594c82","date":"2025-11-02","desc":"משכורת משרד החינוך","amount":369.13,"cat":"משכורת","src":"YahavBank","month":"2025-11"},{"id":"11b873fc-bac5-11f0-9d12-391a4308d083","date":"2025-11-05","desc":"בינלאומי חותם ד.ד הנד ( (הערת 10חוקל","amount":17700,"cat":"כללי","src":"YahavBank","month":"2025-11"},{"id":"4e6cd1ed-bec3-11f0-a2a3-b37e31449e72","date":"2025-11-10","desc":"הפועלים מימון יצחק","amount":4300,"cat":"כללי","src":"YahavBank","month":"2025-11"},{"id":"b0d69a20-c056-11f0-9eb0-39fd8b78d147","date":"2025-11-12","desc":"bit ב.הפועלים-ביט אייר רוזנברג","amount":1300,"cat":"העברות","src":"YahavBank","month":"2025-11"},{"id":"4127b783-c5c0-11f0-b086-15cc472f1f7a","date":"2025-11-20","desc":"קצבת ילדים","amount":583,"cat":"קצבאות","src":"YahavBank","month":"2025-11"},{"id":"5554b131-cb3e-11f0-8daa-33ad4d487c74","date":"2025-11-26","desc":"bit ב.הפועלים-ביט אייר רוזנברג","amount":1000,"cat":"העברות","src":"YahavBank","month":"2025-11"},{"id":"034af2dc-cc0d-11f0-8fef-4f3ed0c51465","date":"2025-11-27","desc":"שרותי בריאות כל","amount":467,"cat":"משכורת","src":"YahavBank","month":"2025-11"},{"id":"a6d63490-cc63-11f0-946b-4500dd387874","date":"2025-11-27","desc":"גולן טלקום","amount":2.72,"cat":"תקשורת","src":"isracard","month":"2025-11"},{"id":"96e5a661-cf88-11f0-b874-d13c08e43f36","date":"2025-11-30","desc":"פטור והנחה מדמי כרטיס","amount":17.9,"cat":"עמלות","src":"leumicard","month":"2025-12"},{"id":"0fd8a144-d3fc-11f0-b5ec-074582a9f405","date":"2025-12-07","desc":"בינלאומי חותם ד.ד הנד ( (הערת 11חוקל","amount":17700,"cat":"כללי","src":"YahavBank","month":"2025-12"},{"id":"0fd93d82-d3fc-11f0-b5ec-074582a9f405","date":"2025-12-07","desc":"טרנזילה סליקה","amount":2716.86,"cat":"סליקת אשראי","src":"YahavBank","month":"2025-12"},{"id":"7eb14686-d645-11f0-9252-a7a1e3f6c5c8","date":"2025-12-10","desc":"בינלאומי חותם ד.ד הנד ( (הערת 20חוקל","amount":4785,"cat":"כללי","src":"YahavBank","month":"2025-12"},{"id":"2a7cb15c-d963-11f0-897b-af454b92aa0e","date":"2025-12-14","desc":"העברה מיידית בנק לאומי לי 1089061009966","amount":1.27,"cat":"העברות","src":"YahavBank","month":"2025-12"},{"id":"2a7c3c21-d963-11f0-897b-af454b92aa0e","date":"2025-12-15","desc":"החזרי מע\"מ לעוס","amount":3166,"cat":"מס הכנסה","src":"YahavBank","month":"2025-12"},{"id":"21f7626c-ddc2-11f0-a1d1-a133693c048a","date":"2025-12-17","desc":"אלע\"ד אל עיר דוד","amount":85,"cat":"כללי","src":"isracard","month":"2025-12"},{"id":"875845ea-de29-11f0-8733-cbab76788ad8","date":"2025-12-21","desc":"קצבת ילדים","amount":583,"cat":"קצבאות","src":"YahavBank","month":"2025-12"},{"id":"f566980a-de8a-11f0-ab33-03cf949efa51","date":"2025-12-21","desc":"הפקדת שיק","amount":469,"cat":"שיק","src":"YahavBank","month":"2025-12"},{"id":"7b7853f5-e69e-11f0-b74f-1541e5adf5bd","date":"2025-12-29","desc":"בייבי סטאר מוצרי תינ","amount":0.9,"cat":"כללי","src":"isracard","month":"2025-12"},{"id":"d5d7fe40-e852-11f0-808a-75a2a0f0a894","date":"2025-12-31","desc":"פטור והנחה מדמי כרטיס","amount":17.9,"cat":"עמלות","src":"leumicard","month":"2026-01"},{"id":"7b78a217-e69e-11f0-b74f-1541e5adf5bd","date":"2026-01-01","desc":"משכורת משרד החינוך","amount":2952.72,"cat":"משכורת","src":"YahavBank","month":"2026-01"},{"id":"971f6995-e9eb-11f0-b2e6-81e20ee1e19a","date":"2026-01-04","desc":"בינלאומי חותם ד.ד הנד ( (הערת 12חוקל","amount":17700,"cat":"כללי","src":"YahavBank","month":"2026-01"},{"id":"971f6994-e9eb-11f0-b2e6-81e20ee1e19a","date":"2026-01-04","desc":"בינלאומי חותם ד.ד הנד ( (הערת 12חוקל","amount":957,"cat":"כללי","src":"YahavBank","month":"2026-01"},{"id":"7c16047a-eb89-11f0-a799-4f382a085e0b","date":"2026-01-06","desc":"טרנזילה סליקה","amount":1878.8,"cat":"סליקת אשראי","src":"YahavBank","month":"2026-01"},{"id":"94106067-ec52-11f0-b6c6-43abfb5b062c","date":"2026-01-07","desc":"הפועלים מימון יצחק","amount":1500,"cat":"כללי","src":"YahavBank","month":"2026-01"},{"id":"b034c0fc-ecad-11f0-a0ef-3967f90a8a30","date":"2026-01-08","desc":"AIG ביטוח","amount":48.78,"cat":"זיכויים","src":"isracard","month":"2026-01"},{"id":"2ea22627-f551-11f0-909f-cf3fb6896491","date":"2026-01-17","desc":"ביטוח כללי מנורה מבט","amount":174,"cat":"זיכויים","src":"isracard","month":"2026-01"},{"id":"4501f212-f5b0-11f0-a0e5-c96c56c4e343","date":"2026-01-20","desc":"קצבת ילדים","amount":598,"cat":"קצבאות","src":"YahavBank","month":"2026-01"},{"id":"6d6ea3b6-f7a4-11f0-893c-39f3390a859b","date":"2026-01-21","desc":"לופה אלבומי תמונות","amount":197,"cat":"זיכויים","src":"isracard","month":"2026-01"},{"id":"27def1d5-00bc-11f1-a4e8-af9b908a56a8","date":"2026-01-31","desc":"פטור והנחה מדמי כרטיס","amount":17.9,"cat":"עמלות","src":"leumicard","month":"2026-02"},{"id":"5d238f20-ff0b-11f0-84ce-7d92767d5c9a","date":"2026-02-01","desc":"משכורת משרד החינוך","amount":4766.34,"cat":"משכורת","src":"YahavBank","month":"2026-02"},{"id":"6b520986-030e-11f1-99b3-cd6a7c5a281f","date":"2026-02-05","desc":"בינלאומי חותם ד.ד הנד ( (הערת 01חוקל","amount":22026.66,"cat":"כללי","src":"YahavBank","month":"2026-02"},{"id":"bcb680da-04a8-11f1-8a92-a9c326eeb414","date":"2026-02-06","desc":"טרנזילה סליקה","amount":3892.98,"cat":"סליקת אשראי","src":"YahavBank","month":"2026-02"},{"id":"ead2cf25-06fe-11f1-bb8f-ef9f900d54cb","date":"2026-02-10","desc":"בינלאומי חותם ד.ד הנד ( (הערת 01חוקל","amount":957,"cat":"כללי","src":"YahavBank","month":"2026-02"},{"id":"1dc6f650-07cb-11f1-b3c8-4d1db6679c37","date":"2026-02-12","desc":"החזרי מע\"מ לעוס","amount":1588,"cat":"מס הכנסה","src":"YahavBank","month":"2026-02"},{"id":"c8023740-0bc4-11f1-a498-c555b015f176","date":"2026-02-15","desc":"בי פרש קניון הדר","amount":34,"cat":"זיכויים","src":"leumicard","month":"2026-02"},{"id":"cee90c26-0e2e-11f1-a142-d520f1856fc8","date":"2026-02-20","desc":"קצבת ילדים","amount":598,"cat":"קצבאות","src":"YahavBank","month":"2026-02"},{"id":"ea092b73-1581-11f1-ba85-c9eb6328aa60","date":"2026-02-27","desc":"ענק סטוק","amount":31,"cat":"זיכויים","src":"isracard","month":"2026-02"},{"id":"3ed5fbd5-1603-11f1-912e-b12acb08fdda","date":"2026-02-28","desc":"פטור והנחה מדמי כרטיס","amount":17.9,"cat":"עמלות","src":"leumicard","month":"2026-03"},{"id":"ea0b003e-1581-11f1-ba85-c9eb6328aa60","date":"2026-03-01","desc":"משכורת משרד החינוך","amount":4414.01,"cat":"משכורת","src":"YahavBank","month":"2026-03"},{"id":"b44cd088-164a-11f1-8253-f15204d5469a","date":"2026-03-01","desc":"הכל כאן סופרמרקט","amount":7.6,"cat":"כלכלה","src":"isracard","month":"2026-03"},{"id":"d1bdb6a8-1908-11f1-ab5d-25a446e719a9","date":"2026-03-05","desc":"בינלאומי חותם ד.ד הנד ( (הערת 20חוקל","amount":22841.5,"cat":"כללי","src":"YahavBank","month":"2026-03"},{"id":"d1bdb6a7-1908-11f1-ab5d-25a446e719a9","date":"2026-03-05","desc":"בינלאומי חותם ד.ד הנד (חותם הנדסה (","amount":957,"cat":"כללי","src":"YahavBank","month":"2026-03"},{"id":"958d8c83-1a9f-11f1-9836-8bb3d44dee8a","date":"2026-03-06","desc":"טרנזילה סליקה","amount":3382.98,"cat":"סליקת אשראי","src":"YahavBank","month":"2026-03"},{"id":"1868969d-2086-11f1-b083-87c8c58a4332","date":"2026-03-12","desc":"ארקפה יקום","amount":2,"cat":"זיכויים","src":"leumicard","month":"2026-03"},{"id":"1865d77c-2086-11f1-b083-87c8c58a4332","date":"2026-03-15","desc":"הפקדת שיק","amount":3200,"cat":"שיק","src":"YahavBank","month":"2026-03"},{"id":"1a6b49c2-215d-11f1-a975-d1b6ee3b4aa4","date":"2026-03-16","desc":"החזרה .אלבר ציי ר הפעולה אסור","amount":2229.7,"cat":"כללי","src":"YahavBank","month":"2026-03"},{"id":"449573a5-21ad-11f1-abb5-97323647fa58","date":"2026-03-17","desc":"קצבת ילדים","amount":598,"cat":"קצבאות","src":"YahavBank","month":"2026-03"},{"id":"60b9a32a-2276-11f1-ab52-2f6c8bcf93a9","date":"2026-03-17","desc":"הפועלים אבו עליאן יא","amount":3200,"cat":"כללי","src":"YahavBank","month":"2026-03"},{"id":"9e7c9be0-240c-11f1-8658-61dc342cd2b3","date":"2026-03-19","desc":"ב.הפועלים-ביט אריאל רוזנבר משיכה לחשבון ה","amount":1600,"cat":"העברות","src":"YahavBank","month":"2026-03"},{"id":"ce58dc04-24d5-11f1-a04a-fd17d7092ec0","date":"2026-03-19","desc":"אגוש-מבית הסת המורים","amount":295,"cat":"תרומה","src":"isracard","month":"2026-03"},{"id":"ce58dc05-24d5-11f1-a04a-fd17d7092ec0","date":"2026-03-19","desc":"אשמורת שירותי רווחה","amount":998,"cat":"כללי","src":"isracard","month":"2026-03"},{"id":"327bffa8-2ca1-11f1-89bb-373470e8069f","date":"2026-03-27","desc":"חומוס הארץ","amount":15,"cat":"זיכויים","src":"leumicard","month":"2026-03"},{"id":"1335f1da-2f69-11f1-83ae-b979a8f92b8c","date":"2026-03-31","desc":"הכל כאן סופרמרקט","amount":2.9,"cat":"כלכלה","src":"leumicard","month":"2026-03"}];
+var RECURRING_DATA = [{"id":"r15HXmdeY15XXlyDXnNeQ15XXnteZIN","name":"ביטוח לאומי הוראות ק","cat":"ביטוח לאומי","freq":"חודשי","monthsPresent":9,"monthlyEquiv":3395.78,"isMonthly":true},{"id":"r15TXlSLXpyDXkteQ15XXnNeUINeV15","name":"הו\"ק גאולה ויזמן","cat":"העברות","freq":"חודשי","monthsPresent":9,"monthlyEquiv":3000,"isMonthly":true},{"id":"r16jXnteZINec15XXmSDXkNeZ16DXmN","name":"רמי לוי אינטרנט/ארנק","cat":"כלכלה","freq":"חודשי","monthsPresent":9,"monthlyEquiv":2478.1,"isMonthly":true},{"id":"r15jXpNeX15XXqi3Xntep15vXoNeq15","name":"טפחות-משכנתא","cat":"משכנתא","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":2165.06,"isMonthly":false},{"id":"r157XqdeZ15vXqiDXnteW15XXnteg15","name":"משיכת מזומנים","cat":"מזומן","freq":"חודשי","monthsPresent":8,"monthlyEquiv":1683.42,"isMonthly":true},{"id":"r15DXktejINeU157Xm9ehINeV157Xoi","name":"אגף המכס ומע\"מ - אינ","cat":"כללי","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":1531,"isMonthly":false},{"id":"r157XoSDXlNeb16DXodeUINei16bXnt","name":"מס הכנסה עצמאיים וחב","cat":"מס הכנסה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":1246.33,"isMonthly":false},{"id":"r15TXm9ecINeb15DXnyDXodeV16TXqN","name":"הכל כאן סופרמרקט","cat":"כלכלה","freq":"חודשי","monthsPresent":9,"monthlyEquiv":1244.55,"isMonthly":true},{"id":"r15TXoteR16jXlCDXkUJJVA","name":"העברה בBIT","cat":"העברות","freq":"חודשי","monthsPresent":8,"monthlyEquiv":1009.78,"isMonthly":true},{"id":"r15vXqNeY15nXodeZINeQ16nXqNeQ15","name":"כרטיסי אשראי לי","cat":"כללי","freq":"חודשי","monthsPresent":7,"monthlyEquiv":990.46,"isMonthly":true},{"id":"rLteQ15zXkdeoINem15nXmSDXqNeb15","name":".אלבר ציי רכב-ר","cat":"רכב","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":942.47,"isMonthly":false},{"id":"r16rXnNee15XXkyDXqteV16jXlCDXk9","name":"תלמוד תורה דרך","cat":"חינוך","freq":"חודשי","monthsPresent":9,"monthlyEquiv":927.78,"isMonthly":true},{"id":"r15PXoNeZ15DXnCDXkNeR15nXoteT","name":"דניאל אביעד","cat":"כללי","freq":"חודשי","monthsPresent":9,"monthlyEquiv":875.17,"isMonthly":true},{"id":"r15DXkteV16kt157XkdeZ16og15TXod","name":"אגוש-מבית הסת המורים","cat":"כללי","freq":"חודשי","monthsPresent":9,"monthlyEquiv":840,"isMonthly":true},{"id":"r15TXoteR16jXlCDXkSBCSVQg15HXoN","name":"העברה ב BIT בנה\"פ","cat":"העברות","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":750.49,"isMonthly":false},{"id":"rUEFZQk9YIHRlbCBhdml2IElM","name":"PAYBOX tel aviv IL","cat":"העברות","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":575.67,"isMonthly":false},{"id":"r15zXkNeV157XmSDXnNee16nXm9eg16","name":"לאומי למשכנתאות","cat":"משכנתא","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":570.79,"isMonthly":false},{"id":"r15TXoteR16jXlCDXnteV16jXnyDXkd","name":"העברה מורן בן חמ משכורת","cat":"העברות","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":519.67,"isMonthly":false},{"id":"r15DXqdee15XXqNeqINep15nXqNeV16","name":"אשמורת שירותי רווחה","cat":"כללי","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":507.67,"isMonthly":false},{"id":"r15HXmdeqINeh16TXqCDXp9eT150","name":"בית ספר קדם","cat":"חינוך","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":465.9,"isMonthly":false},{"id":"r16jXnteZINec15XXmSAtINeS15XXqS","name":"רמי לוי - גוש עציון","cat":"כלכלה","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":447.97,"isMonthly":false},{"id":"rU0hFSU4uQ09NIFNJTkdBUE9SRSBTRw","name":"SHEIN.COM SINGAPORE SG","cat":"ביגוד והנעלה","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":446.49,"isMonthly":false},{"id":"r157XoNeV16jXlCDXlNep16rXnNee15","name":"מנורה השתלמות כ","cat":"השקעה וחיסכון","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":437.39,"isMonthly":false},{"id":"rLdeR16DXpyDXmdeU15Et15DXqdeo15","name":"-בנק יהב-אשראי","cat":"הלוואה","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":405.9,"isMonthly":false},{"id":"rUEFZQk9Y","name":"PAYBOX","cat":"העברות","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":394.56,"isMonthly":false},{"id":"r15TXoteR16jXlCDXqNeV15bXoNeR16","name":"העברה רוזנברגר א אילן ויפית","cat":"העברות","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":388,"isMonthly":false},{"id":"r15HXmdeY15XXlyDXnNeQ15XXnteZ","name":"ביטוח לאומי","cat":"ביטוח לאומי","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":377.67,"isMonthly":false},{"id":"r15nXp9eZ16gg15XXkdeoINeg16TXqt","name":"יקיר ובר נפתלי בע\"מ","cat":"תשלומים","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":366.22,"isMonthly":false},{"id":"r157XoSDXlNeb16DXodeUINeg15nXm9","name":"מס הכנסה ניכויי","cat":"מס הכנסה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":323.44,"isMonthly":false},{"id":"r15PXnNenINen157XoteV16DXkNeV16","name":"דלק קמעונאות גוש עצי","cat":"רכב","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":312.87,"isMonthly":false},{"id":"r16TXnNeY16TXldeo157XqiDXp9eV15","name":"פלטפורמת קואץ'","cat":"ספורט","freq":"חודשי","monthsPresent":9,"monthlyEquiv":311.11,"isMonthly":true},{"id":"r16jXlNeZ15jXmSDXlNeh15nXmNeZIN","name":"רהיטי הסיטי אונליין-","cat":"תשלומים","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":286.67,"isMonthly":false},{"id":"r15zXl9edINee16nXlA","name":"לחם משה","cat":"כלכלה","freq":"חודשי","monthsPresent":9,"monthlyEquiv":279.11,"isMonthly":true},{"id":"r157Xl9eh16DXmSDXlNep15XXpyDXm9","name":"מחסני השוק כפר עציון","cat":"כלכלה","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":264.08,"isMonthly":false},{"id":"r16DXotee15kg15jXldeZ15jXlSDXod","name":"נעמי טויטו סטודיו מט","cat":"תשלומים","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":262.22,"isMonthly":false},{"id":"r15PXnNenINee16DXmNeUINen157Xot","name":"דלק מנטה קמעונאות דר","cat":"רכב","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":243.28,"isMonthly":false},{"id":"r16DXlden15PXmdedINeR16LXng","name":"נוקדים בעמ","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":234.59,"isMonthly":false},{"id":"r16LXoNenINeh15jXlden","name":"ענק סטוק","cat":"קניות","freq":"חודשי","monthsPresent":7,"monthlyEquiv":233.42,"isMonthly":true},{"id":"r16jXnteZINec15XXmSDXkteV16kg16","name":"רמי לוי גוש עציון","cat":"כלכלה","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":225.1,"isMonthly":false},{"id":"r15LXkdeo16og16jXkdeZ16Ig15HXoi","name":"גברת רביע בע\"מ","cat":"פנאי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":218.67,"isMonthly":false},{"id":"r16TXmdeY15HXoNeT16gg16HXpNeV16","name":"פיטבנדר ספורט","cat":"תשלומים","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":217.86,"isMonthly":false},{"id":"r16nXnNee15Qg15fXkScg15zXkdeZ15","name":"שלמה חב' לביטוח אלמנ","cat":"ביטוח","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":213.22,"isMonthly":false},{"id":"r15fXkdeo16og15In15XXoSDXpNec15","name":"חברת ג'וס פלאס + בע\"","cat":"בריאות","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":213.17,"isMonthly":false},{"id":"r16fXpNeZ16Ug16fXpNeV16U","name":"קפיץ קפוץ","cat":"תשלומים","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":199.78,"isMonthly":false},{"id":"r16TXliDXkNek15zXmden16bXmdeqLV","name":"פז אפליקצית-YELLOW","cat":"רכב","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":199.21,"isMonthly":false},{"id":"r16TXlden16Eg15HXmdeSINeS15XXqS","name":"פוקס ביג גוש עציון","cat":"קניות","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":195.69,"isMonthly":false},{"id":"r16LXmdeT15Ug16HXpNeV16jXmA","name":"עידו ספורט","cat":"תשלומים","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":195,"isMonthly":false},{"id":"r16DXlden15PXmdedINeQ15LXldeT15","name":"נוקדים אגודה שיתופית","cat":"כללי","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":190.62,"isMonthly":false},{"id":"r16HXoNeh15nXp9eUINeZ16nXqNeQ15","name":"סנסיקה ישראל","cat":"תשלומים","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":187.78,"isMonthly":false},{"id":"r16TXliBZRUxMT1cg15LXmdec15Q","name":"פז YELLOW גילה","cat":"רכב","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":169.39,"isMonthly":false},{"id":"r15fXqdeR15XXnyDXnNep16jXldeq15","name":"חשבון לשרותי סלקום","cat":"תקשורת","freq":"חודשי","monthsPresent":8,"monthlyEquiv":169.35,"isMonthly":true},{"id":"r16fXldeW15XXm9eV15HXmdelINee15","name":"קוזוכוביץ מגדנאל תור","cat":"כללי","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":169.02,"isMonthly":false},{"id":"r16TXmdeg16rXmSDXm9ek16gg16LXpt","name":"פינתי כפר עציון","cat":"אוכל בחוץ","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":158.22,"isMonthly":false},{"id":"r16nXqNeV16rXmSDXkdeo15nXkNeV16","name":"שרותי בריאות כללית הו\"ק","cat":"ביטוח","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":154.25,"isMonthly":false},{"id":"r157XqtegItehINeS15XXqSDXotem15","name":"מתנ\"ס גוש עציון","cat":"חינוך","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":153.89,"isMonthly":false},{"id":"r157Xldem16bXmdedINeZ16jXldep15","name":"מוצצים ירושלים","cat":"קניות","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":152.64,"isMonthly":false},{"id":"r16nXnNee15Qg15HXmdeY15XXlyAtIN","name":"שלמה ביטוח - חובה","cat":"ביטוח","freq":"חודשי","monthsPresent":8,"monthlyEquiv":147.86,"isMonthly":true},{"id":"r15LXldec158g15jXnNen15XXnQ","name":"גולן טלקום","cat":"תקשורת","freq":"חודשי","monthsPresent":9,"monthlyEquiv":146.94,"isMonthly":true},{"id":"r15zXkdee15Qt16bXnteo16o","name":"לבמה-צמרת","cat":"תשלומים","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":146.56,"isMonthly":false},{"id":"rVE9OIFNQT1JUUy3Xptee16jXqg","name":"TON SPORTS-צמרת","cat":"ספורט","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":146.11,"isMonthly":false},{"id":"r157XkteT15wg15fXmdeZ150v15HXqN","name":"מגדל חיים/בריאות","cat":"ביטוח","freq":"חודשי","monthsPresent":9,"monthlyEquiv":146.01,"isMonthly":true},{"id":"r157XqNeb15Yg16fXlNeZ15zXqteZIN","name":"מרכז קהילתי אפרת","cat":"חינוך","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":142.22,"isMonthly":false},{"id":"r157XoNeS15zXktec15nXnQ","name":"מנגלגלים","cat":"אוכל בחוץ","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":130.89,"isMonthly":false},{"id":"r15PXnNeq15A","name":"דלתא","cat":"ביגוד והנעלה","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":127.06,"isMonthly":false},{"id":"r16nXmdec15Eg157XnNeX15Q","name":"שילב מלחה","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":125.69,"isMonthly":false},{"id":"r16HXldek16gt16TXkNeo150g15DXnN","name":"סופר-פארם אליהו קורן","cat":"פארמה","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":123.58,"isMonthly":false},{"id":"r15PXnNenINen157XoteV16DXkNeV16","name":"דלק קמעונאות גוש עציון","cat":"רכב","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":111.95,"isMonthly":false},{"id":"r16fXqNefINee15vXkdeZLSDXl9eZ15","name":"קרן מכבי- חיוב","cat":"ביטוח","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":108.99,"isMonthly":false},{"id":"r16fXpNeRINep15XXnNeU","name":"קפב שולה","cat":"כללי","freq":"חודשי","monthsPresent":7,"monthlyEquiv":108.89,"isMonthly":true},{"id":"r15TXldeT15nXoSDXkdeiIteeLdeS15","name":"הודיס בע\"מ-גמא","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":107.68,"isMonthly":false},{"id":"r15vXnNecINeo15vXkSXk9eZ16jXlCX","name":"כלל רכב/דירה/עסק","cat":"ביטוח","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":103.27,"isMonthly":false},{"id":"r15jXkNeY15kg15LXldec","name":"טאטי גול","cat":"תשלומים","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":100,"isMonthly":false},{"id":"r15nXoSDXpNec15DXoNeYINeZLdedLS","name":"יס פלאנט י-ם- מזנון","cat":"אוכל בחוץ","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":98.22,"isMonthly":false},{"id":"r16HXldek16gg16TXkNeo150g16rXnN","name":"סופר פארם תלפיות","cat":"פארמה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":96.91,"isMonthly":false},{"id":"rTkVYVCBPTkxJTkUgV1dXMi5ORVhULk","name":"NEXT ONLINE WWW2.NEXT.CO. GB","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":95,"isMonthly":false},{"id":"rUEFZUEFMICpHT09HTEUgR09PR0xF","name":"PAYPAL *GOOGLE GOOGLE","cat":"דיגיטל","freq":"חודשי","monthsPresent":7,"monthlyEquiv":93.27,"isMonthly":true},{"id":"r16LXmdeo15nXmdeqINeR15DXqCDXqd","name":"עיריית באר שבע","cat":"ארנונה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":91.11,"isMonthly":false},{"id":"r16LXpteZ15XXnyDXodeg15jXqCDXkd","name":"עציון סנטר בעמ-צמרת","cat":"כללי","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":87.39,"isMonthly":false},{"id":"r16fXmdeV16HXpyDXkdeo15nXm9eqIN","name":"קיוסק בריכת נוקדים","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":83.48,"isMonthly":false},{"id":"r16TXkNeRINeU157Xntec15vXlA","name":"פאב הממלכה","cat":"פנאי","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":83.17,"isMonthly":false},{"id":"r15TXnNeVINeQ15fXmQ","name":"הלו אחי","cat":"תקשורת","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":80.67,"isMonthly":false},{"id":"r15PXp9eY15zXldefINeZ15nXqdeo15","name":"דקטלון יישראל בעמ","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":79.94,"isMonthly":false},{"id":"r157XqNeb15Yg15TXlNec15HXqdeUIN","name":"מרכז ההלבשה בגוש","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":78.21,"isMonthly":false},{"id":"r16nXmdec15Eg16nXmdeV15XXpyDXmd","name":"שילב שיווק ישיר לבית היול","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":78.1,"isMonthly":false},{"id":"r16HXpNeZ16jXldec15nXmdejINeR16","name":"ספירולייף בע\"מ","cat":"פארמה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":73.11,"isMonthly":false},{"id":"r15PXldeoINeQ15zXldefINeo157Xqi","name":"דור אלון רמת רחל","cat":"רכב","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":72.45,"isMonthly":false},{"id":"r15fXldejINek15XXnNeSINee16HXot","name":"חוף פולג מסעדה","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":70,"isMonthly":false},{"id":"r16nXmdeo15XXqteZINeQ15nXoNeY16","name":"שירותי אינטרספייס-טר","cat":"דיגיטל","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":69.6,"isMonthly":false},{"id":"r16HXldeg15XXnCDXqdei16gg15TXk9","name":"סונול שער הדרום ירושלים","cat":"רכב","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":67.35,"isMonthly":false},{"id":"r15PXqCDXqNeV16DXnyDXkNeZ15bXmd","name":"דר רונן איזיק","cat":"בריאות","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":66.67,"isMonthly":false},{"id":"r15fXkteZ15LXlCDXoNeV15PXk9eq","name":"חגיגה נודדת","cat":"קניות","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":64.33,"isMonthly":false},{"id":"rUERGRS5DT00q","name":"PDFE.COM*","cat":"דיגיטל","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":64.33,"isMonthly":false},{"id":"r16jXliDXktecICgpINeR16Ii154","name":"רז גל () בע\"מ","cat":"רכב","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":62.54,"isMonthly":false},{"id":"r15HXmdeY15XXlyDXm9ec15zXmSDXnt","name":"ביטוח כללי מנורה מבט","cat":"ביטוח","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":61.33,"isMonthly":false},{"id":"r15TXntep16TXmNeZ150g16jXmdep15","name":"המשפטים רישום מקרקעי","cat":"כללי","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":58.22,"isMonthly":false},{"id":"r16TXmdem15Qg15TXqden157XlA","name":"פיצה השקמה","cat":"אוכל בחוץ","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":57.44,"isMonthly":false},{"id":"r15XXmden15jXldeo15kg16fXoNeZ15","name":"ויקטורי קניון מלחה","cat":"כלכלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":55.82,"isMonthly":false},{"id":"r15fXkdeZ15zXqiDXqdeZ16jXldeqIN","name":"חבילת שירות אודי דגן","cat":"תשלומים","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":55.56,"isMonthly":false},{"id":"r15LXqNeSINeS15XXqSDXotem15nXld","name":"גרג גוש עציון","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":55.11,"isMonthly":false},{"id":"r15HXltenINeU15XXqNeQ15XXqiDXp9","name":"בזק הוראות קבע","cat":"תקשורת","freq":"חודשי","monthsPresent":9,"monthlyEquiv":52.97,"isMonthly":true},{"id":"r16rXk9ek16gg15DXl9eW16fXldeqIN","name":"תדפר אחזקות בע?מ","cat":"ועד בית","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":51.88,"isMonthly":false},{"id":"r16jXldeQ15kg16nXlden15XXnNeTIN","name":"רואי שוקולד בע\"מ","cat":"קניות","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":51.78,"isMonthly":false},{"id":"r16nXqNeV16rXmSDXkdeo15nXkNeV16","name":"שרותי בריאות כללית","cat":"ביטוח","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":51.26,"isMonthly":false},{"id":"r15PXqNeaINeQ16jXpSDXlNeV16jXkN","name":"דרך ארץ הוראת קבע","cat":"רכב","freq":"חודשי","monthsPresent":7,"monthlyEquiv":50.98,"isMonthly":true},{"id":"r16HXp9eQ16jXlCAt16rXnNek15nXld","name":"סקארה -תלפיות","cat":"קוסמטיקה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":50.06,"isMonthly":false},{"id":"rMkNPLkNPTXxNT05ETFk","name":"2CO.COM|MONDLY","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":47.89,"isMonthly":false},{"id":"rTE9WQUJMRQ","name":"LOVABLE","cat":"דיגיטל","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":47.28,"isMonthly":false},{"id":"r15jXnNen15nXmdenINeY15HXoiDXnt","name":"טלקייק טבע מרקט","cat":"כלכלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":47.03,"isMonthly":false},{"id":"r15DXldeo15zXmSDXpNeo15nXoNeY","name":"אורלי פרינט","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":43.93,"isMonthly":false},{"id":"r16DXmdeg15XXoSDXpNeZ16bXlCDXkd","name":"נינוס פיצה בר","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":43,"isMonthly":false},{"id":"r16DXmdeVINeT15zXmSDXkNek16jXqg","name":"ניו דלי אפרת","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":41.67,"isMonthly":false},{"id":"rU1VQQUJBU0U","name":"SUPABASE","cat":"דיגיטל","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":40.97,"isMonthly":false},{"id":"r16TXoNeS15Ug15fXqdeR15XXoNeZ16","name":"פנגו חשבונית חודשית","cat":"רכב","freq":"חודשי","monthsPresent":9,"monthlyEquiv":40.82,"isMonthly":true},{"id":"r16DXmdem16og15TXk9eV15HXk9eR15","name":"ניצת הדובדבן","cat":"כלכלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":40.62,"isMonthly":false},{"id":"r16HXoteV15Mg15TXqNeQ15wgLdeb15","name":"סעוד הראל -כללית","cat":"ביטוח","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":39.81,"isMonthly":false},{"id":"rR09PR0xF","name":"GOOGLE","cat":"דיגיטל","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":37.96,"isMonthly":false},{"id":"r16jXm9eR16og15nXqdeo15DXnC0g15","name":"רכבת ישראל- ירושלים-","cat":"תחבורה ציבורית","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":37.28,"isMonthly":false},{"id":"r15DXnNen15jXqNeVINeh15zXmdecIN","name":"אלקטרו סליל בע\"מ","cat":"קניות","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":36.67,"isMonthly":false},{"id":"r15TXodeg15Qg157XqNek15AgLSDXkt","name":"הסנה מרפא - גוש עציון-מזר","cat":"פארמה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":35.89,"isMonthly":false},{"id":"r16HXldeg15XXnCDXkdeZ16og15fXld","name":"סונול בית חורון","cat":"רכב","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":35.89,"isMonthly":false},{"id":"r16fXodeY16jXlSDXntec15fXlA","name":"קסטרו מלחה","cat":"ביגוד והנעלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":33.16,"isMonthly":false},{"id":"rTkVURkxJWC5DT00","name":"NETFLIX.COM","cat":"דיגיטל","freq":"חודשי","monthsPresent":9,"monthlyEquiv":32.9,"isMonthly":true},{"id":"rT0xMWSDXmNeV16jXmNeZ15Q","name":"OLLY טורטיה","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":32.89,"isMonthly":false},{"id":"r15DXqNeV157XlCDXmdehINek15zXkN","name":"ארומה יס פלאנט","cat":"אוכל בחוץ","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":31.11,"isMonthly":false},{"id":"r16bXnteo16ot16LXk9efINeQ16og15","name":"צמרת-עדן את ארז בע\"מ","cat":"קוסמטיקה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":28.33,"isMonthly":false},{"id":"r16fXptek16og15vXpNeoINei16bXmd","name":"קצפת כפר עציון","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":27,"isMonthly":false},{"id":"r16fXldeQ15XXpCDXkNek16jXqg","name":"קואופ אפרת","cat":"כלכלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":26.7,"isMonthly":false},{"id":"rQUlHINeR15nXmNeV15cg15PXmdeo15","name":"AIG ביטוח דירה","cat":"ביטוח","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":26.45,"isMonthly":false},{"id":"r15HXmSDXpNeo16kg16fXoNeZ15XXny","name":"בי פרש קניון מלחה","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":26.44,"isMonthly":false},{"id":"r16TXoNeZ157XlC8g15DXldeq15nXld","name":"פנימה/ אותיות/ מדע ו","cat":"דיגיטל","freq":"כל כמה חודשים","monthsPresent":4,"monthlyEquiv":24,"isMonthly":false},{"id":"rUEFZUEFMICpDQU5WQVBUWUxJTQ","name":"PAYPAL *CANVAPTYLIM","cat":"דיגיטל","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":22.84,"isMonthly":false},{"id":"r15HXmSDXpNeo16kg16fXoNeZ15XXny","name":"בי פרש קניון הדר","cat":"כלכלה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":22.67,"isMonthly":false},{"id":"rRkFNT1VTLkFJ","name":"FAMOUS.AI","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":22.28,"isMonthly":false},{"id":"r15HXoNeQINee16nXp9eQ15XXqiDXkt","name":"בנא משקאות גוש עציון","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":21.42,"isMonthly":false},{"id":"r15TXodeq15PXqNeV16og15TXnteV16","name":"הסתדרות המורים-גבייה","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":20.67,"isMonthly":false},{"id":"r157Xmdeh15jXqCDXp9eV16jXnw","name":"מיסטר קורן","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":20,"isMonthly":false},{"id":"r16fXnNeV15Mg15HXnyDXqdee16LXld","name":"קלוד בן שמעון - שף קונדיט","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":17.44,"isMonthly":false},{"id":"r15PXnteZINeb16jXmNeZ16E","name":"דמי כרטיס","cat":"עמלות","freq":"חודשי","monthsPresent":9,"monthlyEquiv":17.44,"isMonthly":true},{"id":"r154u15TXkNeV16bXqC3XkNeS16Mg15","name":"מ.האוצר-אגף המכס מיס","cat":"מיסים","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":17.22,"isMonthly":false},{"id":"r16jXmdeR15nXqg","name":"ריבית","cat":"הלוואה","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":15.51,"isMonthly":false},{"id":"r16jXldec15PXmdefINee15zXl9eUIN","name":"רולדין מלחה ירושלים","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":15.11,"isMonthly":false},{"id":"r157XkNek15nXmdeqINeg15fXnteU","name":"מאפיית נחמה","cat":"כלכלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":15.04,"isMonthly":false},{"id":"r157XmSDXqdeR16Ig15HXoiLXng","name":"מי שבע בע\"מ","cat":"מים","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":14.44,"isMonthly":false},{"id":"r154u15TXqteX15HXldeo15Qt16TXoN","name":"מ.התחבורה-פנגו מוביט","cat":"תחבורה ציבורית","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":13.94,"isMonthly":false},{"id":"r16HXoNeT15XXldeZ16Ug16nXmdec16","name":"סנדוויץ שילת","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":13.33,"isMonthly":false},{"id":"rUEFZUEFMICpHT09HTEUgWU9VVFVCRQ","name":"PAYPAL *GOOGLE YOUTUBE","cat":"דיגיטל","freq":"כל כמה חודשים","monthsPresent":5,"monthlyEquiv":13.28,"isMonthly":false},{"id":"r15fXoNefINee15vXqdeZ16jXmSDXm9","name":"חנן מכשירי כתיבה ומו","cat":"ציוד משרדי","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":13.02,"isMonthly":false},{"id":"r16jXldec15PXmdefINeU15PXqCDXmd","name":"רולדין הדר ירושלים","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":13,"isMonthly":false},{"id":"r15HXldeo15LXqNehINeR16gg15TXk9","name":"בורגרס בר הדר","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":12.89,"isMonthly":false},{"id":"r16LXoden15Qg157XqdeV16rXpNeqIN","name":"עסקה משותפת קניון הדר","cat":"קניות","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":12.72,"isMonthly":false},{"id":"r15PXnteZINeb16jXmNeZ16EgL9eU16","name":"דמי כרטיס /הנפקה","cat":"עמלות","freq":"חודשי","monthsPresent":9,"monthlyEquiv":11.93,"isMonthly":true},{"id":"r15XXldeQ15kt16TXmdeZINeU16DXlN","name":"וואי-פיי הנהלת חשבונות בע","cat":"כללי","freq":"חודשי","monthsPresent":9,"monthlyEquiv":11.68,"isMonthly":true},{"id":"r15fXoNeZ15XXnyDXp9eg15nXldefIN","name":"חניון קניון עזריאלי ירושל","cat":"רכב","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":10.78,"isMonthly":false},{"id":"r157XqdeUINek15zXnteo","name":"משה פלמר","cat":"כללי","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":9.44,"isMonthly":false},{"id":"r15vXpNeZ16gg16jXm9eR16og16fXnN","name":"כפיר רכבת קלה בע\"מ","cat":"תחבורה ציבורית","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":6.94,"isMonthly":false},{"id":"r157XodeV15EoOTkpINeR16LXng","name":"מסוב(99) בעמ","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":6.44,"isMonthly":false},{"id":"r16TXnNeQ16TXnCDXl9eR15nXkQ","name":"פלאפל חביב","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":6,"isMonthly":false},{"id":"r16DXkNeZ15nXp9ehINeZ16nXqNeQ15","name":"נאייקס ישראל מכונות","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":4.67,"isMonthly":false},{"id":"r15fXoNeZ15XXnyDXp9eg15nXldefIN","name":"חניון קניון עזריאלי","cat":"רכב","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":4.44,"isMonthly":false},{"id":"r16nXldeQ16jXnteUINeg16LXnteU","name":"שוארמה נעמה","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":4.44,"isMonthly":false},{"id":"r16TXmdem15XXl9eZINeT15nXmdef","name":"פיצוחי דיין","cat":"כלכלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":3.89,"isMonthly":false},{"id":"rQ0FSUkVGT1VSINeR15nXqiDXlNeb16","name":"CARREFOUR בית הכרם י","cat":"כלכלה","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":3.87,"isMonthly":false},{"id":"r157Xldec15Qg15DXp9eV15XXqNeZ15","name":"מולה אקווריום","cat":"חיות מחמד","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":3.11,"isMonthly":false},{"id":"r16fXpNeUINen16TXlCBH","name":"קפה קפה G","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":2.17,"isMonthly":false},{"id":"r157XqSAtINen16gg15HXoiLXng","name":"מש - קר בע\"מ","cat":"אוכל בחוץ","freq":"תקופתי","monthsPresent":2,"monthlyEquiv":1.89,"isMonthly":false},{"id":"r15vXkdeZ16kgNiDXl9eV16bXlCDXpt","name":"כביש 6 חוצה צפון בע\"","cat":"רכב","freq":"תקופתי","monthsPresent":3,"monthlyEquiv":1.62,"isMonthly":false},{"id":"r15nXlNeRLSDXk9ee15kg15vXqNeY15","name":"יהב- דמי כרטיס","cat":"עמלות","freq":"כל כמה חודשים","monthsPresent":6,"monthlyEquiv":0,"isMonthly":false}];
+var FULL_MONTHS = ['2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03'];
+var N_MONTHS = 9;
+var MONTH_LABELS = {
+  '2025-07':'יולי 25','2025-08':'אוגוסט 25','2025-09':'ספטמבר 25',
+  '2025-10':'אוקטובר 25','2025-11':'נובמבר 25','2025-12':'דצמבר 25',
+  '2026-01':'ינואר 26','2026-02':'פברואר 26','2026-03':'מרץ 26'
+};
+
+// ── STATE ──
+var state = { v:2, incomeExclusions:[], incomeOverride:null, fixedExclusions:[], fixedOverrides:{}, fixedOverride:null, goals:[] };
+
+function saveState() { try { localStorage.setItem('magaot_v2', JSON.stringify(state)); } catch(e) {} }
+function loadState() {
+  try { var r=localStorage.getItem('magaot_v2'); if(r){ var p=JSON.parse(r); if(p.v===2) state=p; } } catch(e) {}
+}
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  refreshDashboard();
+}
+
+// ── FORMAT ──
+function fmt(n) {
+  if (n==null||isNaN(n)) return '\u20aa0';
+  var sign = n<0 ? '-' : '';
+  return sign+'\u20aa'+Math.abs(Math.round(n)).toLocaleString('he-IL');
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── INCOME TAB ──
+function renderIncomeTab() {
+  var tbody = document.getElementById('income-tbody');
+  var sorted = INCOME_DATA.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  var html = '';
+  for (var i=0; i<sorted.length; i++) {
+    var t = sorted[i];
+    var ex = state.incomeExclusions.indexOf(t.id) >= 0;
+    html += '<tr class="' + (ex?'opacity-40':'') + '" data-tid="' + esc(t.id) + '">';
+    html += '<td class="px-3 py-2"><input type="checkbox" ' + (ex?'':'checked') + ' onchange="toggleIncome(&#39;' + esc(t.id) + '&#39;,this.checked)"></td>';
+    html += '<td class="px-3 py-2 text-slate-600 whitespace-nowrap text-xs">' + esc(t.date) + '</td>';
+    html += '<td class="px-3 py-2 text-slate-800 max-w-xs"><div class="truncate" title="' + esc(t.desc) + '">' + esc(t.desc) + '</div></td>';
+    html += '<td class="px-3 py-2 text-slate-400 text-xs hide-mobile">' + esc(t.cat) + '</td>';
+    html += '<td class="px-3 py-2 text-slate-400 text-xs hide-mobile">' + esc(MONTH_LABELS[t.month]||t.month) + '</td>';
+    html += '<td class="px-3 py-2 text-left font-semibold text-green-700 whitespace-nowrap">' + fmt(t.amount) + '</td>';
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+  updateIncomeSummary();
+}
+
+function toggleIncome(id, checked) {
+  if (checked) {
+    state.incomeExclusions = state.incomeExclusions.filter(function(x){ return x!==id; });
+  } else {
+    if (state.incomeExclusions.indexOf(id)<0) state.incomeExclusions.push(id);
+  }
+  saveState();
+  var row = document.querySelector('[data-tid="' + id + '"]');
+  if (row) row.classList.toggle('opacity-40', !checked);
+  var cb = row ? row.querySelector('input[type=checkbox]') : null;
+  if (cb) cb.checked = checked;
+  updateIncomeSummary();
+  refreshDashboard();
+}
+
+function checkAllIncome(v) {
+  state.incomeExclusions = v ? [] : INCOME_DATA.map(function(t){ return t.id; });
+  saveState(); renderIncomeTab(); refreshDashboard();
+}
+
+function computeIncomeAvg() {
+  var mt = {};
+  for (var i=0; i<INCOME_DATA.length; i++) {
+    var t = INCOME_DATA[i];
+    if (state.incomeExclusions.indexOf(t.id)>=0) continue;
+    mt[t.month] = (mt[t.month]||0) + t.amount;
+  }
+  var ms = Object.keys(mt).filter(function(m){ return FULL_MONTHS.indexOf(m)>=0; });
+  if (!ms.length) return 0;
+  var sum = ms.reduce(function(a,m){ return a+mt[m]; }, 0);
+  return sum / ms.length;
+}
+
+function updateIncomeSummary() {
+  var mt = {}, cnt = 0;
+  for (var i=0; i<INCOME_DATA.length; i++) {
+    var t = INCOME_DATA[i];
+    if (state.incomeExclusions.indexOf(t.id)<0) { mt[t.month]=(mt[t.month]||0)+t.amount; cnt++; }
+  }
+  var ms = Object.keys(mt).filter(function(m){ return FULL_MONTHS.indexOf(m)>=0; });
+  var avg = ms.length ? ms.reduce(function(a,m){ return a+mt[m]; },0)/ms.length : 0;
+  document.getElementById('income-avg-display').textContent = fmt(avg);
+  document.getElementById('income-avg-note').textContent = ms.length + ' חודשים נבחרו | ' + cnt + ' עסקאות';
+  document.getElementById('income-final-display').textContent =
+    state.incomeOverride!=null ? 'דריסה פעילה \u2192 ' + fmt(state.incomeOverride) : '';
+  if (state.incomeOverride!=null) document.getElementById('income-override').value = state.incomeOverride;
+}
+
+function onIncomeOverride() {
+  var v = parseFloat(document.getElementById('income-override').value);
+  state.incomeOverride = isNaN(v) ? null : v;
+  saveState(); updateIncomeSummary(); refreshDashboard();
+}
+function clearIncomeOverride() {
+  state.incomeOverride = null;
+  document.getElementById('income-override').value = '';
+  saveState(); updateIncomeSummary(); refreshDashboard();
+}
+function getIncomeValue() {
+  return state.incomeOverride!=null ? state.incomeOverride : computeIncomeAvg();
+}
+
+// ── FIXED EXPENSES TAB ──
+function renderFixedTab() {
+  document.getElementById('fixed-count').textContent = RECURRING_DATA.length;
+  var tbody = document.getElementById('fixed-tbody');
+  var html = '';
+  for (var i=0; i<RECURRING_DATA.length; i++) {
+    var g = RECURRING_DATA[i];
+    var ex = state.fixedExclusions.indexOf(g.id)>=0;
+    var ov = state.fixedOverrides[g.id];
+    var amt = ov!==undefined ? ov : g.monthlyEquiv;
+    var bc = g.isMonthly ? 'badge-monthly' : 'badge-periodic';
+    var bt = g.isMonthly ? 'חודשי שוטף' : 'תקופתי נצבר';
+    var gid = esc(g.id);
+    html += '<tr class="' + (ex?'opacity-40':'') + '" data-gid="' + gid + '">';
+    html += '<td class="px-3 py-2"><input type="checkbox" ' + (ex?'':'checked') + ' onchange="toggleFixed(&#39;' + gid + '&#39;,this.checked)"></td>';
+    html += '<td class="px-3 py-2 text-slate-800 max-w-xs"><div class="truncate" title="' + esc(g.name) + '">' + esc(g.name) + '</div></td>';
+    html += '<td class="px-3 py-2 text-slate-400 text-xs hide-mobile">' + esc(g.cat) + '</td>';
+    html += '<td class="px-3 py-2 text-slate-400 text-xs hide-mobile">' + esc(g.freq) + '</td>';
+    html += '<td class="px-3 py-2 text-slate-400 text-xs hide-mobile">' + g.monthsPresent + '/' + N_MONTHS + '</td>';
+    html += '<td class="px-3 py-2"><span class="badge ' + bc + ' text-xs px-2 py-0.5 rounded-full font-medium">' + bt + '</span></td>';
+    html += '<td class="px-3 py-2 text-left"><input type="number" class="inline-edit' + (ov!==undefined?' override-active':'') + '" value="' + Math.round(amt) + '" data-gid="' + gid + '" onchange="onFixedRowOv(&#39;' + gid + '&#39;,this.value)" title="ממוצע: ' + fmt(g.monthlyEquiv) + '"></td>';
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+  updateFixedSummary();
+}
+
+function toggleFixed(id, checked) {
+  if (checked) {
+    state.fixedExclusions = state.fixedExclusions.filter(function(x){ return x!==id; });
+  } else {
+    if (state.fixedExclusions.indexOf(id)<0) state.fixedExclusions.push(id);
+  }
+  saveState();
+  var row = document.querySelector('[data-gid="' + id + '"]');
+  if (row) row.classList.toggle('opacity-40', !checked);
+  var cb = row ? row.querySelector('input[type=checkbox]') : null;
+  if (cb) cb.checked = checked;
+  updateFixedSummary(); refreshDashboard();
+}
+
+function onFixedRowOv(id, val) {
+  var n = parseFloat(val);
+  if (isNaN(n)) delete state.fixedOverrides[id];
+  else state.fixedOverrides[id] = n;
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+
+function checkAllFixed(v) {
+  state.fixedExclusions = v ? [] : RECURRING_DATA.map(function(g){ return g.id; });
+  saveState(); renderFixedTab(); refreshDashboard();
+}
+
+function computeFixedBreakdown() {
+  var monthly=0, periodic=0;
+  for (var i=0; i<RECURRING_DATA.length; i++) {
+    var g = RECURRING_DATA[i];
+    if (state.fixedExclusions.indexOf(g.id)>=0) continue;
+    var amt = state.fixedOverrides[g.id]!==undefined ? state.fixedOverrides[g.id] : g.monthlyEquiv;
+    if (g.isMonthly) monthly+=amt; else periodic+=amt;
+  }
+  return { monthly:monthly, periodic:periodic };
+}
+
+function updateFixedSummary() {
+  var bd = computeFixedBreakdown();
+  var raw = bd.monthly + bd.periodic;
+  var total = state.fixedOverride!=null ? state.fixedOverride : raw;
+  document.getElementById('fixed-total-display').textContent = fmt(total);
+  document.getElementById('fixed-monthly-display').textContent = fmt(bd.monthly);
+  document.getElementById('fixed-periodic-display').textContent = fmt(bd.periodic);
+  if (state.fixedOverride!=null) document.getElementById('fixed-override').value = state.fixedOverride;
+}
+
+function onFixedOverride() {
+  var v = parseFloat(document.getElementById('fixed-override').value);
+  state.fixedOverride = isNaN(v)?null:v;
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+function clearFixedOverride() {
+  state.fixedOverride = null;
+  document.getElementById('fixed-override').value = '';
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+function getFixedValue() {
+  if (state.fixedOverride!=null) return state.fixedOverride;
+  var bd = computeFixedBreakdown();
+  return bd.monthly + bd.periodic;
+}
+function getFixedBreakdown() {
+  var bd = computeFixedBreakdown();
+  if (state.fixedOverride!=null) {
+    var raw = bd.monthly+bd.periodic;
+    var r = raw>0 ? state.fixedOverride/raw : 0;
+    return { monthly:bd.monthly*r, periodic:bd.periodic*r };
+  }
+  return bd;
+}
+
+// ── GOALS TAB ──
+function renderGoalsTab() {
+  var tbody = document.getElementById('goals-tbody');
+  if (state.goals.length===0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-slate-300 py-10 text-sm">לחץ "+ הוסף יעד" כדי להתחיל</td></tr>';
+    return;
+  }
+  var html = '';
+  for (var i=0; i<state.goals.length; i++) {
+    var g = state.goals[i];
+    html += '<tr>';
+    html += '<td class="px-4 py-2"><input type="text" value="' + esc(g.name) + '" placeholder="שם היעד..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:border-blue-400" onchange="updateGoal(&#39;' + g.id + '&#39;,&#39;name&#39;,this.value)"></td>';
+    html += '<td class="px-4 py-2 text-left"><input type="number" value="' + (g.amount||'') + '" placeholder="0" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-28 text-left focus:outline-none focus:border-blue-400" oninput="updateGoal(&#39;' + g.id + '&#39;,&#39;amount&#39;,this.value)"></td>';
+    html += '<td class="px-4 py-2 text-center"><button onclick="deleteGoal(&#39;' + g.id + '&#39;)" class="text-slate-300 hover:text-red-500 text-xl transition leading-none">\u00d7</button></td>';
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+  updateGoalsSummary();
+}
+
+function addGoal() {
+  state.goals.push({ id:'g'+Date.now(), name:'', amount:0 });
+  saveState(); renderGoalsTab();
+  setTimeout(function(){
+    var inputs = document.querySelectorAll('#goals-tbody input[type=text]');
+    if (inputs.length) inputs[inputs.length-1].focus();
+  }, 50);
+}
+function updateGoal(id, field, val) {
+  var g = state.goals.filter(function(x){ return x.id===id; })[0];
+  if (!g) return;
+  g[field] = field==='amount' ? (parseFloat(val)||0) : val;
+  saveState(); updateGoalsSummary(); refreshDashboard();
+}
+function deleteGoal(id) {
+  state.goals = state.goals.filter(function(x){ return x.id!==id; });
+  saveState(); renderGoalsTab(); refreshDashboard();
+}
+function updateGoalsSummary() {
+  document.getElementById('goals-total-display').textContent = fmt(getGoalsValue());
+}
+function getGoalsValue() {
+  return state.goals.reduce(function(s,g){ return s+(g.amount||0); }, 0);
+}
+
+// ── DASHBOARD ──
+function refreshDashboard() {
+  var income = getIncomeValue();
+  var fixed = getFixedValue();
+  var bd = getFixedBreakdown();
+  var goals = getGoalsValue();
+  var afterFixed = income - fixed;
+  var free = afterFixed - goals;
+
+  document.getElementById('dash-income').textContent = fmt(income);
+  document.getElementById('dash-fixed').textContent = fmt(fixed);
+  document.getElementById('dash-fixed-monthly').textContent = fmt(bd.monthly);
+  document.getElementById('dash-fixed-periodic').textContent = fmt(bd.periodic);
+  document.getElementById('dash-after-fixed').textContent = fmt(afterFixed);
+  document.getElementById('dash-goals').textContent = fmt(goals);
+  document.getElementById('dash-free').textContent = fmt(free);
+  document.getElementById('dash-free').style.color = free>=0 ? '#065f46' : '#dc2626';
+  document.getElementById('dash-free-label').textContent = free>=0 ? '\uD83D\uDED2 מגירת הבזבוזים' : '\u26A0\uFE0F גירעון!';
+  document.getElementById('dash-per-day').textContent = fmt(free/30);
+  document.getElementById('dash-per-week').textContent = fmt(free/4.33);
+  var pct = income>0 ? Math.round(((goals+bd.periodic)/income)*100) : 0;
+  document.getElementById('dash-savings-pct').textContent = pct+'%';
+}
+
+// ── INIT ──
+loadState();
+renderIncomeTab();
+renderFixedTab();
+renderGoalsTab();
+refreshDashboard();
+</script>
+</body>
+</html>
