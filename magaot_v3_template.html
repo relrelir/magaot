@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>טבלת המגירות</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; }
+
+  /* ── Tab nav ── */
+  .tab-btn { border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab-btn.active { border-bottom-color: #2563eb; color: #1d4ed8; font-weight: 700; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ── Accordion drawers ── */
+  .drawer-body { overflow: hidden; transition: max-height .3s ease; }
+  .drawer-body.open { max-height: 9999px; }
+  .drawer-body.closed { max-height: 0; }
+  .chevron { transition: transform .25s; display:inline-block; }
+  .open .chevron { transform: rotate(180deg); }
+
+  /* ── Drawer color themes ── */
+  .drawer-blue   { border-right: 4px solid #3b82f6; }
+  .drawer-slate  { border-right: 4px solid #64748b; }
+  .drawer-indigo { border-right: 4px solid #6366f1; }
+  .drawer-green  { border-right: 4px solid #22c55e; }
+  .drawer-violet { border-right: 4px solid #8b5cf6; }
+  .drawer-gray   { border-right: 4px solid #9ca3af; }
+  .drawer-orange { border-right: 4px solid #f97316; }
+  .drawer-amber  { border-right: 4px solid #f59e0b; }
+  .drawer-pink   { border-right: 4px solid #ec4899; }
+  .drawer-purple { border-right: 4px solid #a855f7; }
+  .drawer-rose   { border-right: 4px solid #f43f5e; }
+  .drawer-teal   { border-right: 4px solid #14b8a6; }
+  .drawer-red    { border-right: 4px solid #ef4444; }
+  .drawer-sky    { border-right: 4px solid #0ea5e9; }
+
+  /* ── Chips ── */
+  .chip { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .chip-blue   { background:#dbeafe; color:#1e40af; }
+  .chip-slate  { background:#f1f5f9; color:#475569; }
+  .chip-indigo { background:#e0e7ff; color:#4338ca; }
+  .chip-green  { background:#dcfce7; color:#166534; }
+  .chip-violet { background:#ede9fe; color:#5b21b6; }
+  .chip-gray   { background:#f3f4f6; color:#4b5563; }
+  .chip-orange { background:#ffedd5; color:#c2410c; }
+  .chip-amber  { background:#fef3c7; color:#92400e; }
+  .chip-pink   { background:#fce7f3; color:#9d174d; }
+  .chip-purple { background:#f3e8ff; color:#7e22ce; }
+  .chip-rose   { background:#ffe4e6; color:#be123c; }
+  .chip-teal   { background:#ccfbf1; color:#0f766e; }
+  .chip-red    { background:#fee2e2; color:#991b1b; }
+  .chip-sky    { background:#e0f2fe; color:#0369a1; }
+
+  /* ── Progress bars ── */
+  .progress-track { height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden; }
+  .progress-fill  { height:100%; border-radius:999px; transition: width .5s ease; }
+  .prog-ok   { background: linear-gradient(90deg,#22c55e,#16a34a); }
+  .prog-warn { background: linear-gradient(90deg,#f59e0b,#d97706); }
+  .prog-over { background: linear-gradient(90deg,#ef4444,#dc2626); }
+
+  /* ── Wizard modal ── */
+  #wizard-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50; display:none; align-items:center; justify-content:center; }
+  #wizard-backdrop.open { display:flex; }
+  .wizard-btn { border-radius:16px; padding:20px 24px; cursor:pointer; transition:all .2s; text-align:center; border:2px solid transparent; }
+  .wizard-btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.12); }
+  .wizard-btn-fixed    { background:#eff6ff; border-color:#bfdbfe; }
+  .wizard-btn-variable { background:#fff7ed; border-color:#fed7aa; }
+  .tooltip-warn { background:#fef3c7; border:1px solid #fde68a; color:#92400e; border-radius:8px; padding:8px 12px; font-size:.8rem; margin-top:8px; display:none; }
+
+  /* ── Inline edits ── */
+  .inline-edit { border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; width:90px; font-size:.85rem; text-align:left; }
+  .inline-edit:focus { outline:2px solid #3b82f6; border-color:transparent; }
+  .override-active { outline:2px solid #2563eb !important; }
+
+  /* ── Sticky summary bar ── */
+  .sticky-bar { position:sticky; bottom:0; background:white; border-top:2px solid #e2e8f0; padding:12px 20px; z-index:5; box-shadow:0 -4px 12px rgba(0,0,0,.06); }
+
+  /* ── Dashboard rows ── */
+  .result-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+  .sub-row    { display:flex; justify-content:space-between; padding:5px 0 5px 24px; color:#64748b; font-size:.88rem; }
+  .grand-row  { background:#f0fdf4; border-radius:12px; padding:14px 16px; margin-top:10px; display:flex; justify-content:space-between; align-items:center; }
+  .deficit-row{ background:#fef2f2; border-radius:12px; padding:14px 16px; margin-top:10px; display:flex; justify-content:space-between; align-items:center; }
+
+  /* ── Data note ── */
+  .data-note { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px; padding:8px 14px; font-size:.82rem; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+
+  /* ── Income group accordion ── */
+  .income-group-card { background:white; border-right:4px solid #22c55e; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:8px; overflow:hidden; }
+  .income-group-hdr { display:flex; align-items:center; gap:0; cursor:pointer; padding:10px 16px; transition:background .15s; }
+  .income-group-hdr:hover { background:#f8fafc; }
+  .income-group-body { overflow:hidden; transition:max-height .3s ease; }
+  .income-group-body.open { max-height:9999px; }
+  .income-group-body.closed { max-height:0; }
+
+  /* ── Month sub-rows ── */
+  .month-row-income { background:#f0fdf4; }
+  .month-row-fixed  { background:#eff6ff; }
+  .month-row-income td, .month-row-fixed td { padding:5px 12px; font-size:.8rem; border-top:1px solid #e8f5e9; }
+  .month-row-fixed td { border-top:1px solid #e1effe; }
+  .ov-input { border:1px solid #d1d5db; border-radius:5px; padding:3px 6px; width:80px; font-size:.8rem; text-align:left; }
+  .ov-input:focus { outline:2px solid #3b82f6; }
+  .ov-input.override-active { outline:2px solid #2563eb !important; background:#eff6ff; }
+
+  /* ── Fixed item expand ── */
+  .item-expand-btn { cursor:pointer; color:#94a3b8; font-size:.75rem; padding:2px 6px; border-radius:4px; transition:all .15s; }
+  .item-expand-btn:hover { background:#e2e8f0; color:#475569; }
+
+  /* ── Global month chips ── */
+  .month-chip { font-size:.7rem; font-weight:600; padding:3px 10px; border-radius:999px; cursor:pointer; transition:all .15s; border:1px solid transparent; white-space:nowrap; }
+  .month-chip-on  { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+  .month-chip-off { background:#fee2e2; color:#991b1b; border-color:#fecaca; text-decoration:line-through; opacity:.7; }
+
+  /* ── Trend indicators ── */
+  .trend-up   { color:#ef4444; font-weight:700; }  /* bad for expense */
+  .trend-down { color:#22c55e; font-weight:700; }  /* good for expense */
+  .trend-up-inc   { color:#22c55e; font-weight:700; }  /* good for income */
+  .trend-down-inc { color:#ef4444; font-weight:700; }  /* bad for income */
+  .trend-flat { color:#94a3b8; }
+
+  /* ── Dashboard link buttons ── */
+  .dash-link { cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+  .dash-link:hover { opacity:.75; }
+
+  input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#2563eb; }
+  tr:hover td { background:#f8fafc; }
+  @media(max-width:640px){ .hide-mobile { display:none; } }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<!-- ════════════════════ WIZARD MODAL ════════════════════ -->
+<div id="wizard-backdrop">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="font-bold text-slate-800 text-lg" id="wizard-title">הוספת הוצאה</h2>
+      <button onclick="wizardClose()" class="text-slate-400 hover:text-red-500 text-2xl leading-none">&times;</button>
+    </div>
+    <!-- Step 1 -->
+    <div id="wizard-step1">
+      <p class="text-slate-600 text-sm mb-6 leading-relaxed">האם הסכום ידוע מראש ואינו משתנה מחודש לחודש,<br>או שהוא תלוי בהתנהגות שלך?</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="wizard-btn wizard-btn-fixed" onclick="wizardGoStep2('fixed')">
+          <div class="text-3xl mb-2">📌</div>
+          <div class="font-bold text-blue-800 text-sm">קבועה וידועה מראש</div>
+          <div class="text-xs text-blue-600 mt-1">שכירות, מינוי, הלוואה</div>
+        </div>
+        <div class="wizard-btn wizard-btn-variable" onclick="wizardGoStep2('variable')">
+          <div class="text-3xl mb-2">🔄</div>
+          <div class="font-bold text-orange-800 text-sm">תלויה בהתנהגות שלי</div>
+          <div class="text-xs text-orange-600 mt-1">סופרמרקט, דלק, מסעדות</div>
+        </div>
+      </div>
+    </div>
+    <!-- Step 2 – Fixed -->
+    <div id="wizard-step2-fixed" class="hidden">
+      <button onclick="wizardBack()" class="text-sm text-slate-400 hover:text-blue-600 mb-4">&larr; חזרה</button>
+      <div class="bg-blue-50 rounded-xl p-4 mb-4">
+        <p class="text-sm text-blue-700 font-medium">📌 הוצאה קבועה — תיכנס למגירת הקבועות</p>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">שם ההוצאה</label>
+          <input id="wf-name" type="text" placeholder="לדוגמה: HOT, ביטוח חיים..." class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" oninput="wizardCheckTooltip(this.value,'fixed')">
+          <div id="wf-tooltip" class="tooltip-warn">💡 טיפ: סופרמרקט ודלק הן הוצאות משתנות!</div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-500 block mb-1">סכום חודשי ₪</label>
+            <input id="wf-amount" type="number" placeholder="0" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 block mb-1">מגירה</label>
+            <select id="wf-drawer" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+              <option value="housing">🏠 דיור ומיסים</option>
+              <option value="comms">📡 תקשורת</option>
+              <option value="insurance">🛡️ ביטוחים</option>
+              <option value="invest">📈 השקעות</option>
+              <option value="loans">🏦 הלוואות</option>
+              <option value="other_fixed">📌 קבועות אחרות</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button onclick="wizardSaveFixed()" class="mt-4 w-full bg-blue-600 text-white rounded-xl py-2.5 font-semibold hover:bg-blue-700 transition text-sm">הוסף להוצאות קבועות</button>
+    </div>
+    <!-- Step 2 – Variable -->
+    <div id="wizard-step2-variable" class="hidden">
+      <button onclick="wizardBack()" class="text-sm text-slate-400 hover:text-blue-600 mb-4">&larr; חזרה</button>
+      <div class="bg-orange-50 rounded-xl p-4 mb-4">
+        <p class="text-sm text-orange-700 font-medium">🔄 הוצאה משתנה — תיכנס למגירת הבזבוזים</p>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">שם ההוצאה</label>
+          <input id="wv-name" type="text" placeholder="לדוגמה: שופרסל, פז..." class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" oninput="wizardCheckTooltip(this.value,'variable')">
+          <div id="wv-tooltip" class="tooltip-warn">💡 טיפ: זו הוצאה משתנה — נהל אותה בזהירות!</div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-500 block mb-1">תקציב חודשי ₪</label>
+            <input id="wv-amount" type="number" placeholder="0" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 block mb-1">קטגוריה</label>
+            <select id="wv-drawer" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
+              <option value="supermarket">🛒 סופרמרקט</option>
+              <option value="fuel">⛽ דלק ותחבורה</option>
+              <option value="kids">👶 הוצאות ילדים</option>
+              <option value="entertainment">🎭 בידור ופנאי</option>
+              <option value="shopping">🛍️ קניות</option>
+              <option value="health">💊 בריאות</option>
+              <option value="other_var">📦 אחר</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button onclick="wizardSaveVariable()" class="mt-4 w-full bg-orange-500 text-white rounded-xl py-2.5 font-semibold hover:bg-orange-600 transition text-sm">הוסף כהוצאה משתנה</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ HEADER ════════════════════ -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-800">🗂️ טבלת המגירות</h1>
+      <p class="text-xs text-slate-400">נתונים: יולי 2025 – מרץ 2026 · 9 חודשים</p>
+    </div>
+    <button onclick="wizardOpen()" class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-blue-700 transition">+ הוסף הוצאה</button>
+  </div>
+  <!-- Month filter chips -->
+  <div class="max-w-5xl mx-auto px-4 pb-2 flex flex-wrap gap-1.5 items-center border-t border-slate-50 pt-2">
+    <span class="text-xs text-slate-400 ml-1">פילטר חודשים:</span>
+    <div id="month-chips-row" class="flex flex-wrap gap-1.5"></div>
+  </div>
+  <!-- Tabs -->
+  <div class="max-w-5xl mx-auto px-4 flex border-t border-slate-100 overflow-x-auto">
+    <button class="tab-btn active px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('income',this)">💰 הכנסות</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('fixed',this)">📌 קבועות</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('variable',this)">🔄 משתנות</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('goals',this)">🏦 יעדים ונצבר</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('dashboard',this)">📊 לוח בקרה</button>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-6">
+
+<!-- ══════════ TAB 1: INCOME ══════════ -->
+<div id="tab-income" class="tab-pane active">
+  <div class="data-note">ℹ️ לחץ על שם מקור כדי לפרוס פירוט לפי חודש. בטל חודשים חריגים או דרוס סכום. בטל כל מקור כדי להוציאו מהממוצע.</div>
+  <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+    <h2 class="font-semibold text-slate-700">הכנסות לפי מקור</h2>
+    <div class="flex gap-3 items-center">
+      <button onclick="autoFlagOutliers()" class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition">🔍 סמן חריגים אוטומטית</button>
+    </div>
+  </div>
+  <div id="income-groups-container"></div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex flex-wrap gap-4 items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-400 mb-1">ממוצע חודשי מחושב</div>
+        <div id="income-avg-display" class="text-2xl font-bold text-green-700">₪0</div>
+        <div id="income-avg-note" class="text-xs text-slate-400 mt-0.5"></div>
+      </div>
+      <div class="flex-1 max-w-xs">
+        <label class="text-xs text-slate-400 block mb-1">דריסה ידנית — הכנסה לחישוב</label>
+        <div class="flex gap-2 items-center">
+          <input type="number" id="income-override" placeholder="הזן סכום..."
+            class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+            oninput="onIncomeOverride()">
+          <button onclick="clearIncomeOverride()" class="text-slate-400 hover:text-red-500 text-lg leading-none">&times;</button>
+        </div>
+        <div id="income-final-display" class="text-xs text-blue-600 mt-1 font-medium"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TAB 2: FIXED EXPENSES ══════════ -->
+<div id="tab-fixed" class="tab-pane">
+  <div class="data-note">ℹ️ לחץ על שם פריט לפתוח פירוט חודשי. בטל חודשים חריגים, דרוס סכום לחודש ספציפי. לחץ כותרת מגירה לפתוח/לסגור.</div>
+  <div id="fixed-drawers"></div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex flex-wrap gap-6 items-center justify-between">
+      <div class="flex flex-wrap gap-6">
+        <div>
+          <div class="text-xs text-slate-400 mb-0.5">סה"כ קבועות</div>
+          <div id="fixed-total-display" class="text-xl font-bold text-blue-700">₪0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-0.5">חיוב חודשי שוטף</div>
+          <div id="fixed-monthly-display" class="text-lg font-semibold text-slate-600">₪0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 mb-0.5">נצבר (תקופתי)</div>
+          <div id="fixed-periodic-display" class="text-lg font-semibold text-amber-600">₪0</div>
+        </div>
+      </div>
+      <div class="flex-1 max-w-xs">
+        <label class="text-xs text-slate-400 block mb-1">דריסה ידנית — סה"כ קבועות</label>
+        <div class="flex gap-2 items-center">
+          <input type="number" id="fixed-override" placeholder="הזן סכום..."
+            class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+            oninput="onFixedOverride()">
+          <button onclick="clearFixedOverride()" class="text-slate-400 hover:text-red-500 text-lg leading-none">&times;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TAB 3: VARIABLE EXPENSES ══════════ -->
+<div id="tab-variable" class="tab-pane">
+  <div class="data-note">ℹ️ הוצאות משתנות — הסכום תלוי בהתנהגותך. הממוצע מחושב מ-9 חודשים; הגדר תקציב לכל מגירה.</div>
+  <div id="variable-drawers"></div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex flex-wrap gap-6 items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-400 mb-0.5">סה"כ משתנות (ממוצע 9 חודשים)</div>
+        <div id="var-total-display" class="text-xl font-bold text-orange-600">₪0</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-400 mb-0.5">תקציב מוגדר</div>
+        <div id="var-budget-display" class="text-xl font-bold text-slate-700">₪0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TAB 4: GOALS & ACCUMULATED ══════════ -->
+<div id="tab-goals" class="tab-pane">
+  <div class="data-note">ℹ️ פקדונות ויעדים — כמה לשים בצד כל חודש. הזנת סכום שנתי מחלקת ל-12 אוטומטית.</div>
+  <div class="mb-5 space-y-3" id="accum-drawers"></div>
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="font-semibold text-slate-700">🎯 יעדים אישיים נוספים</h2>
+      <button onclick="addGoal()" class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-blue-700 transition">+ הוסף יעד</button>
+    </div>
+    <table class="w-full text-sm">
+      <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+        <th class="px-4 py-2 text-right">שם היעד</th>
+        <th class="px-4 py-2 text-center">סכום שנתי ₪</th>
+        <th class="px-4 py-2 text-left">חודשי (÷12)</th>
+        <th class="px-4 py-2 text-center w-10"></th>
+      </tr></thead>
+      <tbody id="goals-tbody">
+        <tr><td colspan="4" class="text-center text-slate-300 py-8 text-sm">לחץ "+ הוסף יעד"</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-400 mb-0.5">סה"כ הפרשה חודשית — נצבר + יעדים</div>
+        <div id="goals-total-display" class="text-2xl font-bold text-violet-700">₪0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TAB 5: DASHBOARD ══════════ -->
+<div id="tab-dashboard" class="tab-pane">
+  <div class="data-note">ℹ️ תמונת התזרים המלאה. לחץ על מספר לניווט לטאב המתאים. כל שינוי בטאבים מתעדכן כאן מיידית.</div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+      <div class="text-xs text-green-600 font-semibold mb-1">💰 הכנסה חודשית</div>
+      <div class="text-2xl font-black text-green-700 dash-link" id="d-income" onclick="goToTab('income')">₪0</div>
+    </div>
+    <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
+      <div class="text-xs text-red-600 font-semibold mb-1">📌 הוצאות קבועות</div>
+      <div class="text-2xl font-black text-red-700 dash-link" id="d-fixed" onclick="goToTab('fixed')">₪0</div>
+    </div>
+    <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-center">
+      <div class="text-xs text-violet-600 font-semibold mb-1">🏦 יעדים ונצבר</div>
+      <div class="text-2xl font-black text-violet-700 dash-link" id="d-goals" onclick="goToTab('goals')">₪0</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Left: Formula card -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+      <h3 class="font-bold text-slate-700 mb-4 pb-3 border-b border-slate-100">חישוב מגירות</h3>
+      <div class="result-row">
+        <span class="text-slate-600 font-medium">💰 הכנסה</span>
+        <span class="font-bold text-green-700 dash-link" id="dash-income" onclick="goToTab('income')">₪0</span>
+      </div>
+      <div class="result-row">
+        <span class="text-slate-600 font-medium">📌 פחות: קבועות</span>
+        <span class="font-bold text-red-600 dash-link" id="dash-fixed" onclick="goToTab('fixed')">₪0</span>
+      </div>
+      <div class="sub-row">
+        <span>⬦ שוטף</span>
+        <span class="font-medium text-slate-500" id="dash-fixed-m">₪0</span>
+      </div>
+      <div class="sub-row mb-1">
+        <span>💼 נצבר</span>
+        <span class="font-medium text-amber-600" id="dash-fixed-p">₪0</span>
+      </div>
+      <div class="result-row" style="border-bottom:2px solid #e2e8f0;padding-bottom:12px;">
+        <span class="text-slate-500 text-sm">נשאר אחרי קבועות</span>
+        <span class="font-semibold text-slate-600" id="dash-after-fixed">₪0</span>
+      </div>
+      <div class="result-row mt-1">
+        <span class="text-slate-600 font-medium">🏦 פחות: יעדים ונצבר</span>
+        <span class="font-bold text-violet-600 dash-link" id="dash-goals" onclick="goToTab('goals')">₪0</span>
+      </div>
+      <div class="border-t-2 border-slate-200 my-3"></div>
+      <div id="dash-result-row" class="grand-row">
+        <div>
+          <div class="font-bold text-green-800 dash-link" id="dash-free-label" onclick="goToTab('variable')">🛒 מגירת הבזבוזים</div>
+          <div class="text-xs text-green-700 mt-0.5" id="dash-free-sub">פנוי לחיים השוטפים</div>
+        </div>
+        <span class="font-black text-2xl text-green-800" id="dash-free">₪0</span>
+      </div>
+      <div class="mt-4 grid grid-cols-3 gap-2 text-center text-sm bg-slate-50 rounded-xl p-3">
+        <div>
+          <div class="text-slate-400 text-xs">ליום</div>
+          <div class="font-semibold text-slate-700" id="dash-per-day">₪0</div>
+        </div>
+        <div>
+          <div class="text-slate-400 text-xs">לשבוע</div>
+          <div class="font-semibold text-slate-700" id="dash-per-week">₪0</div>
+        </div>
+        <div>
+          <div class="text-slate-400 text-xs">% חיסכון</div>
+          <div class="font-semibold text-slate-700" id="dash-pct">0%</div>
+        </div>
+      </div>
+    </div>
+    <!-- Right: Variable progress bars -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+      <h3 class="font-bold text-slate-700 mb-4 pb-3 border-b border-slate-100">📊 מעקב הוצאות משתנות</h3>
+      <div id="progress-bars"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ── EMBEDDED DATA ──────────────────────────────────────────────────────────
+var INCOME_GROUPS  = INCOME_GROUPS_PLACEHOLDER;
+var RECURRING_DATA = RECURRING_PLACEHOLDER;
+var VAR_AVGS       = VARAVGS_PLACEHOLDER;
+var VAR_TREND      = VARTREND_PLACEHOLDER;
+var VAR_MONTH_DATA = VARMONTH_PLACEHOLDER;
+var VAR_TXN_DATA     = VARTXN_PLACEHOLDER;
+var VAR_BIZ_COUNT    = VARBIZCOUNT_PLACEHOLDER;
+
+var FULL_MONTHS = ['2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03'];
+var N_MONTHS = 9;
+var MONTH_LABELS = {
+  '2025-07':'יולי 25','2025-08':'אוגוסט 25','2025-09':'ספטמבר 25',
+  '2025-10':'אוקטובר 25','2025-11':'נובמבר 25','2025-12':'דצמבר 25',
+  '2026-01':'ינואר 26','2026-02':'פברואר 26','2026-03':'מרץ 26'
+};
+
+// ── INCOME DRAWERS ─────────────────────────────────────────────────────────
+var INCOME_DRAWERS = [
+  { id:'salary',    label:'משכורות',          icon:'💼', color:'green'  },
+  { id:'business',  label:'הכנסות עסקיות',    icon:'💹', color:'blue'   },
+  { id:'benefits',  label:'קצבאות ממשלה',     icon:'🏛️', color:'violet' },
+  { id:'refunds',   label:'החזרים וזיכויים',  icon:'📄', color:'teal'   },
+  { id:'transfers', label:'העברות',            icon:'🔄', color:'slate'  },
+  { id:'other_inc', label:'אחר',              icon:'📦', color:'gray'   }
+];
+
+// ── FIXED / VAR DRAWER DEFINITIONS ─────────────────────────────────────────
+var FIXED_DRAWERS = [
+  { id:'housing',    label:'דיור ומיסים',    icon:'🏠', color:'blue',   cats:['ארנונה','משכנתא','חשמל','מים','ועד בית'] },
+  { id:'comms',      label:'תקשורת',         icon:'📡', color:'indigo', cats:['תקשורת','דיגיטל'] },
+  { id:'insurance',  label:'ביטוחים',        icon:'🛡️', color:'violet', cats:['ביטוח','ביטוח לאומי'] },
+  { id:'invest',     label:'השקעות וחיסכון', icon:'📈', color:'green',  cats:['השקעה וחיסכון'] },
+  { id:'loans',      label:'הלוואות',        icon:'🏦', color:'slate',  cats:['הלוואה'] },
+  { id:'other_fixed',label:'קבועות אחרות',  icon:'📌', color:'gray',   cats:[] }
+];
+var VAR_DRAWERS = [
+  { id:'supermarket',  label:'סופרמרקט',     icon:'🛒', color:'orange', cats:['כלכלה','מזון'] },
+  { id:'fuel',         label:'דלק ותחבורה',  icon:'⛽', color:'amber',  cats:['רכב','תחבורה ציבורית'] },
+  { id:'kids',         label:'הוצאות ילדים', icon:'👶', color:'pink',   cats:['חינוך','חוגים','ספורט'] },
+  { id:'entertainment',label:'בידור ופנאי',  icon:'🎭', color:'purple', cats:['פנאי','אוכל בחוץ'] },
+  { id:'shopping',     label:'קניות',        icon:'🛍️', color:'rose',   cats:['קניות','ביגוד והנעלה','קוסמטיקה'] },
+  { id:'health',       label:'בריאות ופארמה',icon:'💊', color:'teal',   cats:['בריאות','פארמה'] },
+  { id:'other_var',    label:'משתנות אחרות', icon:'📦', color:'gray',   cats:[] }
+];
+var ACCUM_DRAWERS_DEF = [
+  { id:'car_annual', label:'טסט וביטוח רכב שנתי', icon:'🚗', color:'sky',   hint:'ביטוח שנתי לרכב + טסט' },
+  { id:'taxes',      label:'מיסים / קיזוזים',      icon:'📊', color:'red',   hint:'מע"מ, מס הכנסה, ביטוח לאומי' },
+  { id:'vacation',   label:'חופשות ונסיעות',        icon:'✈️', color:'sky',   hint:'חופשה משפחתית, נסיעות' },
+  { id:'home_maint', label:'תחזוקת בית',            icon:'🔧', color:'amber', hint:'תיקונים, ריהוט, שיפוצים' }
+];
+
+// ── STATE v4 ───────────────────────────────────────────────────────────────
+var state = {
+  v: 4,
+  // income
+  incomeGroupExclusions: [],
+  incomeMonthExclusions: {},
+  incomeMonthOverrides: {},
+  incomeOverride: null,
+  expandedIncomeGroups: {},
+  // fixed
+  fixedExclusions: [],
+  fixedOverrides: {},
+  fixedMonthExclusions: {},
+  fixedMonthOverrides: {},
+  fixedOverride: null,
+  expandedFixedItems: {},
+  // shared
+  drawerOpen: {},
+  varBudgets: {},
+  varMonthExclusions: {},
+  varMonthOverrides: {},
+  expandedVarDrawers: {},
+  expandedVarMonths: {},
+  expandedVarBiz: {},
+  accumGoals: {},
+  goals: [],
+  manualFixed: [],
+  manualVar: [],
+  globalMonthExclusions: []
+};
+
+function saveState() { try { localStorage.setItem('magaot_v4', JSON.stringify(state)); } catch(e) {} }
+function loadState() {
+  try {
+    var r = localStorage.getItem('magaot_v4');
+    if (!r) {
+      // try migrating from v3
+      var old = localStorage.getItem('magaot_v3');
+      if (old) {
+        var p3 = JSON.parse(old);
+        if (p3.v === 3) {
+          state.fixedExclusions  = p3.fixedExclusions  || [];
+          state.fixedOverrides   = p3.fixedOverrides   || {};
+          state.fixedOverride    = p3.fixedOverride    || null;
+          state.drawerOpen       = p3.drawerOpen       || {};
+          state.varBudgets       = p3.varBudgets       || {};
+          state.accumGoals       = p3.accumGoals       || {};
+          state.goals            = p3.goals            || [];
+          state.manualFixed      = p3.manualFixed      || [];
+          state.manualVar        = p3.manualVar        || [];
+          state.incomeOverride   = p3.incomeOverride   || null;
+        }
+      }
+    } else {
+      var p = JSON.parse(r);
+      if (p.v === 4) state = p;
+    }
+  } catch(e) {}
+  // ensure defaults
+  ACCUM_DRAWERS_DEF.forEach(function(d) { if (!state.accumGoals[d.id]) state.accumGoals[d.id] = {annual:0}; });
+  FIXED_DRAWERS.forEach(function(d)  { if (state.drawerOpen[d.id] === undefined) state.drawerOpen[d.id] = true; });
+  VAR_DRAWERS.forEach(function(d)    { if (state.drawerOpen['v_'+d.id] === undefined) state.drawerOpen['v_'+d.id] = true; });
+  INCOME_DRAWERS.forEach(function(d) { if (state.drawerOpen['inc_'+d.id] === undefined) state.drawerOpen['inc_'+d.id] = true; });
+  if (!state.expandedIncomeGroups) state.expandedIncomeGroups = {};
+  if (!state.expandedFixedItems)   state.expandedFixedItems   = {};
+  if (!state.incomeGroupExclusions) state.incomeGroupExclusions = [];
+  if (!state.incomeMonthExclusions) state.incomeMonthExclusions = {};
+  if (!state.incomeMonthOverrides)  state.incomeMonthOverrides  = {};
+  if (!state.fixedMonthExclusions)  state.fixedMonthExclusions  = {};
+  if (!state.fixedMonthOverrides)   state.fixedMonthOverrides   = {};
+  if (!state.globalMonthExclusions) state.globalMonthExclusions = [];
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null || isNaN(n)) return '\u20aa0';
+  var sign = n < 0 ? '-' : '';
+  return sign + '\u20aa' + Math.abs(Math.round(n)).toLocaleString('he-IL');
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function trendFrac(monthAmounts) {
+  var ms = FULL_MONTHS.filter(function(m) { return monthAmounts[m] !== undefined; });
+  if (ms.length < 4) return null;
+  var total = 0; ms.forEach(function(m) { total += monthAmounts[m]; });
+  var avg = total / ms.length;
+  var last3 = ms.slice(-3);
+  var l3total = 0; last3.forEach(function(m) { l3total += monthAmounts[m]; });
+  var l3avg = l3total / last3.length;
+  return avg > 0 ? (l3avg - avg) / avg : 0;
+}
+function trendHtmlInc(frac) {
+  if (frac === null) return '';
+  if (frac > 0.05)  return '<span class="trend-up-inc text-xs"> &#8593;</span>';
+  if (frac < -0.05) return '<span class="trend-down-inc text-xs"> &#8595;</span>';
+  return '<span class="trend-flat text-xs"> &#8594;</span>';
+}
+function trendHtmlExp(frac) {
+  if (frac === null) return '';
+  if (frac > 0.05)  return '<span class="trend-up text-xs"> &#8593;</span>';
+  if (frac < -0.05) return '<span class="trend-down text-xs"> &#8595;</span>';
+  return '<span class="trend-flat text-xs"> &#8594;</span>';
+}
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  refreshDashboard();
+}
+function goToTab(name) {
+  var btns = document.querySelectorAll('.tab-btn');
+  var idx = { income:0, fixed:1, variable:2, goals:3, dashboard:4 }[name] || 0;
+  if (btns[idx]) switchTab(name, btns[idx]);
+}
+
+// ── DRAWER ACCORDION ───────────────────────────────────────────────────────
+function toggleDrawer(id) {
+  state.drawerOpen[id] = !state.drawerOpen[id];
+  saveState();
+  var body   = document.getElementById('db-' + id);
+  var header = document.getElementById('dh-' + id);
+  if (!body) return;
+  body.classList.toggle('open',   !!state.drawerOpen[id]);
+  body.classList.toggle('closed', !state.drawerOpen[id]);
+  if (header) header.classList.toggle('open', !!state.drawerOpen[id]);
+}
+
+// ── GLOBAL MONTH CHIPS ─────────────────────────────────────────────────────
+function renderMonthChips() {
+  var html = '';
+  FULL_MONTHS.forEach(function(m) {
+    var excl = state.globalMonthExclusions.indexOf(m) >= 0;
+    html += '<button class="month-chip ' + (excl ? 'month-chip-off' : 'month-chip-on') + '" onclick="toggleGlobalMonth(&#39;' + m + '&#39;)">';
+    html += MONTH_LABELS[m];
+    html += '</button>';
+  });
+  document.getElementById('month-chips-row').innerHTML = html;
+}
+function toggleGlobalMonth(m) {
+  var idx = state.globalMonthExclusions.indexOf(m);
+  if (idx >= 0) state.globalMonthExclusions.splice(idx, 1);
+  else state.globalMonthExclusions.push(m);
+  saveState();
+  renderMonthChips();
+  renderIncomeDrawers();
+  renderFixedDrawers();
+  refreshDashboard();
+}
+
+// ── INCOME: COMPUTE ────────────────────────────────────────────────────────
+function computeGroupEffective(g) {
+  if (state.incomeGroupExclusions.indexOf(g.id) >= 0) return 0;
+  var monthExcl = state.incomeMonthExclusions[g.id] || [];
+  var monthOvrd = state.incomeMonthOverrides[g.id]  || {};
+  var total = 0, count = 0;
+  FULL_MONTHS.forEach(function(m) {
+    if (g.monthAmounts[m] === undefined) return;
+    if (state.globalMonthExclusions.indexOf(m) >= 0) return;
+    if (monthExcl.indexOf(m) >= 0) return;
+    var amt = (monthOvrd[m] !== undefined) ? monthOvrd[m] : g.monthAmounts[m];
+    total += amt;
+    count++;
+  });
+  return count ? total / count : 0;
+}
+function computeIncomeAvg() {
+  // Build per-month totals across all active groups, then average over months
+  var monthTotals = {};
+  INCOME_GROUPS.forEach(function(g) {
+    if (state.incomeGroupExclusions.indexOf(g.id) >= 0) return;
+    var monthExcl = state.incomeMonthExclusions[g.id] || [];
+    var monthOvrd = state.incomeMonthOverrides[g.id]  || {};
+    FULL_MONTHS.forEach(function(m) {
+      if (g.monthAmounts[m] === undefined) return;
+      if (state.globalMonthExclusions.indexOf(m) >= 0) return;
+      if (monthExcl.indexOf(m) >= 0) return;
+      var amt = (monthOvrd[m] !== undefined) ? monthOvrd[m] : g.monthAmounts[m];
+      monthTotals[m] = (monthTotals[m] || 0) + amt;
+    });
+  });
+  var ms = Object.keys(monthTotals);
+  if (!ms.length) return 0;
+  return ms.reduce(function(s, m) { return s + monthTotals[m]; }, 0) / ms.length;
+}
+function getIncomeValue() {
+  return state.incomeOverride != null ? state.incomeOverride : computeIncomeAvg();
+}
+
+// ── INCOME: DRAWER AVERAGE HELPER ─────────────────────────────────────────
+function computeDrawerIncomeAvg(groups) {
+  var monthTotals = {};
+  groups.forEach(function(g) {
+    if (state.incomeGroupExclusions.indexOf(g.id) >= 0) return;
+    var monthExcl = state.incomeMonthExclusions[g.id] || [];
+    var monthOvrd = state.incomeMonthOverrides[g.id]  || {};
+    FULL_MONTHS.forEach(function(m) {
+      if (g.monthAmounts[m] === undefined) return;
+      if (state.globalMonthExclusions.indexOf(m) >= 0) return;
+      if (monthExcl.indexOf(m) >= 0) return;
+      var amt = (monthOvrd[m] !== undefined) ? monthOvrd[m] : g.monthAmounts[m];
+      monthTotals[m] = (monthTotals[m] || 0) + amt;
+    });
+  });
+  var ms = Object.keys(monthTotals);
+  if (!ms.length) return 0;
+  return ms.reduce(function(s, m) { return s + monthTotals[m]; }, 0) / ms.length;
+}
+
+// ── INCOME: RENDER DRAWERS ─────────────────────────────────────────────────
+function renderIncomeDrawers() {
+  var container = document.getElementById('income-groups-container');
+  var html = '<div class="space-y-3">';
+
+  INCOME_DRAWERS.forEach(function(d) {
+    var groups = INCOME_GROUPS.filter(function(g) { return g.drawer === d.id; });
+    if (groups.length === 0) return;
+
+    var drawerAvg = computeDrawerIncomeAvg(groups);
+    var isOpen    = state.drawerOpen['inc_' + d.id] !== false;
+
+    html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-' + d.color + '">';
+
+    // Drawer header
+    html += '<div id="dh-inc_' + d.id + '" class="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 ' + (isOpen ? 'open' : '') + '" onclick="toggleDrawer(&#39;inc_' + d.id + '&#39;)">';
+    html += '<div class="flex items-center gap-3">';
+    html += '<span class="text-xl">' + d.icon + '</span>';
+    html += '<span class="font-semibold text-slate-700">' + d.label + '</span>';
+    html += '<span class="chip chip-' + d.color + '">' + groups.length + ' מקורות</span>';
+    html += '</div>';
+    html += '<div class="flex items-center gap-3">';
+    html += '<span class="font-bold text-green-700">' + fmt(drawerAvg) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
+    html += '<span class="chevron text-slate-400 text-sm">&#9660;</span>';
+    html += '</div></div>';
+
+    // Drawer body
+    html += '<div id="db-inc_' + d.id + '" class="drawer-body ' + (isOpen ? 'open' : 'closed') + '">';
+    html += '<table class="w-full text-sm"><thead><tr class="bg-slate-50 text-slate-400 text-xs">';
+    html += '<th class="px-4 py-2 text-right w-10">כלול</th>';
+    html += '<th class="px-4 py-2 text-right">מקור</th>';
+    html += '<th class="px-4 py-2 text-right hide-mobile">חודשים</th>';
+    html += '<th class="px-4 py-2 text-left">₪/חודש</th>';
+    html += '</tr></thead><tbody>';
+
+    groups.forEach(function(g) {
+      var gid      = esc(g.id);
+      var excluded = state.incomeGroupExclusions.indexOf(g.id) >= 0;
+      var expanded = !!state.expandedIncomeGroups[g.id];
+      var effective = computeGroupEffective(g);
+      var frac      = trendFrac(g.monthAmounts);
+
+      // Source row
+      html += '<tr class="' + (excluded ? 'opacity-40' : '') + '" data-igid="' + gid + '">';
+      html += '<td class="px-4 py-2" onclick="event.stopPropagation()">';
+      html += '<input type="checkbox" ' + (excluded ? '' : 'checked') + ' onchange="toggleIncomeGroup(&#39;' + gid + '&#39;,this.checked)">';
+      html += '</td>';
+      html += '<td class="px-4 py-2 text-slate-800 cursor-pointer" onclick="toggleIncomeExpand(&#39;' + gid + '&#39;)">';
+      html += '<div class="flex items-center gap-1.5">';
+      html += '<span class="item-expand-btn">' + (expanded ? '&#9650;' : '&#9660;') + '</span>';
+      html += '<span class="truncate max-w-xs hover:text-green-700" title="' + esc(g.name) + '">' + esc(g.name) + '</span>';
+      if (frac !== null) html += trendHtmlInc(frac);
+      html += '</div></td>';
+      html += '<td class="px-4 py-2 text-slate-400 text-xs hide-mobile">' + g.monthsPresent + '/' + N_MONTHS + '</td>';
+      html += '<td class="px-4 py-2 text-left font-bold text-green-700">' + fmt(effective) + '</td>';
+      html += '</tr>';
+
+      // Month detail rows
+      FULL_MONTHS.forEach(function(m) {
+        if (g.monthAmounts[m] === undefined) return;
+        var monthExcl  = state.incomeMonthExclusions[g.id] || [];
+        var monthOvrd  = state.incomeMonthOverrides[g.id]  || {};
+        var mExcluded  = monthExcl.indexOf(m) >= 0;
+        var gExcluded  = state.globalMonthExclusions.indexOf(m) >= 0;
+        var ovrdVal    = monthOvrd[m];
+        var actualAmt  = g.monthAmounts[m];
+        var rowDisabled = mExcluded || gExcluded;
+
+        html += '<tr class="month-row-income income-month-' + gid + (expanded ? '' : ' hidden') + (rowDisabled ? ' opacity-40' : '') + '">';
+        html += '<td class="px-4">';
+        html += '<input type="checkbox" ' + (rowDisabled ? '' : 'checked') + (gExcluded ? ' disabled' : '') + ' onchange="toggleIncomeMonth(&#39;' + gid + '&#39;,&#39;' + m + '&#39;,this.checked)">';
+        html += '</td>';
+        html += '<td class="px-4 text-slate-500 pr-8">' + (MONTH_LABELS[m] || m) + (gExcluded ? ' <span class="text-xs text-red-400">(גלובלי)</span>' : '') + '</td>';
+        html += '<td class="px-4 font-medium text-green-700 hide-mobile">' + fmt(actualAmt) + '</td>';
+        html += '<td class="px-4"><input type="number" class="ov-input' + (ovrdVal !== undefined ? ' override-active' : '') + '" value="' + (ovrdVal !== undefined ? Math.round(ovrdVal) : '') + '" placeholder="' + Math.round(actualAmt) + '" onchange="onIncomeMonthOv(&#39;' + gid + '&#39;,&#39;' + m + '&#39;,this.value)"></td>';
+        html += '</tr>';
+      });
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+  updateIncomeSummary();
+}
+
+// ── INCOME: INTERACTIONS ───────────────────────────────────────────────────
+function toggleIncomeGroup(id, checked) {
+  if (checked) {
+    state.incomeGroupExclusions = state.incomeGroupExclusions.filter(function(x) { return x !== id; });
+  } else {
+    if (state.incomeGroupExclusions.indexOf(id) < 0) state.incomeGroupExclusions.push(id);
+  }
+  saveState();
+  var card = document.getElementById('igc-' + id);
+  if (card) card.classList.toggle('opacity-50', !checked);
+  updateIncomeSummary();
+  refreshDashboard();
+}
+function toggleIncomeExpand(id) {
+  state.expandedIncomeGroups[id] = !state.expandedIncomeGroups[id];
+  saveState();
+  var expanded = !!state.expandedIncomeGroups[id];
+  // Toggle month rows
+  var rows = document.querySelectorAll('.income-month-' + id);
+  for (var i = 0; i < rows.length; i++) rows[i].classList.toggle('hidden', !expanded);
+  // Update expand icon
+  var sourceRow = document.querySelector('[data-igid="' + id + '"]');
+  if (sourceRow) {
+    var btn = sourceRow.querySelector('.item-expand-btn');
+    if (btn) btn.innerHTML = expanded ? '&#9650;' : '&#9660;';
+  }
+}
+function toggleIncomeMonth(gid, month, checked) {
+  if (!state.incomeMonthExclusions[gid]) state.incomeMonthExclusions[gid] = [];
+  if (checked) {
+    state.incomeMonthExclusions[gid] = state.incomeMonthExclusions[gid].filter(function(m) { return m !== month; });
+  } else {
+    if (state.incomeMonthExclusions[gid].indexOf(month) < 0) state.incomeMonthExclusions[gid].push(month);
+  }
+  saveState();
+  updateIncomeSummary();
+  refreshDashboard();
+}
+function onIncomeMonthOv(gid, month, val) {
+  if (!state.incomeMonthOverrides[gid]) state.incomeMonthOverrides[gid] = {};
+  var n = parseFloat(val);
+  if (isNaN(n) || val === '') delete state.incomeMonthOverrides[gid][month];
+  else state.incomeMonthOverrides[gid][month] = n;
+  saveState();
+  updateIncomeSummary();
+  refreshDashboard();
+}
+function updateIncomeSummary() {
+  var avg = computeIncomeAvg();
+  var activeGroups = INCOME_GROUPS.filter(function(g) { return state.incomeGroupExclusions.indexOf(g.id) < 0; }).length;
+  var activeMonths = FULL_MONTHS.filter(function(m) { return state.globalMonthExclusions.indexOf(m) < 0; }).length;
+  document.getElementById('income-avg-display').textContent = fmt(avg);
+  document.getElementById('income-avg-note').textContent = activeGroups + ' מקורות · ' + activeMonths + ' חודשים';
+  document.getElementById('income-final-display').textContent = state.incomeOverride != null ? 'דריסה \u2192 ' + fmt(state.incomeOverride) : '';
+  if (state.incomeOverride != null) document.getElementById('income-override').value = state.incomeOverride;
+}
+function onIncomeOverride() {
+  var v = parseFloat(document.getElementById('income-override').value);
+  state.incomeOverride = isNaN(v) ? null : v;
+  saveState(); updateIncomeSummary(); refreshDashboard();
+}
+function clearIncomeOverride() {
+  state.incomeOverride = null;
+  document.getElementById('income-override').value = '';
+  saveState(); updateIncomeSummary(); refreshDashboard();
+}
+
+// ── INCOME: AUTO-OUTLIER DETECTION ─────────────────────────────────────────
+function autoFlagOutliers() {
+  var flagged = 0;
+  INCOME_GROUPS.forEach(function(g) {
+    var ms = FULL_MONTHS.filter(function(m) { return g.monthAmounts[m] !== undefined; });
+    if (ms.length < 3) return;
+    var vals = ms.map(function(m) { return g.monthAmounts[m]; });
+    var mean = vals.reduce(function(s,v){ return s+v; }, 0) / vals.length;
+    var variance = vals.reduce(function(s,v){ return s + (v-mean)*(v-mean); }, 0) / vals.length;
+    var sd = Math.sqrt(variance);
+    if (!state.incomeMonthExclusions[g.id]) state.incomeMonthExclusions[g.id] = [];
+    ms.forEach(function(m) {
+      var v = g.monthAmounts[m];
+      if (Math.abs(v - mean) > 1.5 * sd) {
+        if (state.incomeMonthExclusions[g.id].indexOf(m) < 0) {
+          state.incomeMonthExclusions[g.id].push(m);
+          flagged++;
+        }
+      }
+    });
+  });
+  saveState();
+  renderIncomeDrawers();
+  refreshDashboard();
+  if (flagged > 0) alert('סומנו ' + flagged + ' חודשים חריגים (±1.5σ). בדוק את הפירוט וסמן ידנית לביטול.');
+  else alert('לא נמצאו חודשים חריגים משמעותיים.');
+}
+
+// ── FIXED: COMPUTE ─────────────────────────────────────────────────────────
+function computeFixedItemEffective(g) {
+  if (state.fixedExclusions.indexOf(g.id) >= 0) return 0;
+  // Item-level override takes priority
+  if (state.fixedOverrides[g.id] !== undefined) return state.fixedOverrides[g.id];
+  // Month-level computation (if monthAmounts available)
+  if (g.monthAmounts && Object.keys(g.monthAmounts).length > 0) {
+    var monthExcl = state.fixedMonthExclusions[g.id] || [];
+    var monthOvrd = state.fixedMonthOverrides[g.id]  || {};
+    var total = 0, count = 0;
+    FULL_MONTHS.forEach(function(m) {
+      if (g.monthAmounts[m] === undefined) return;
+      if (state.globalMonthExclusions.indexOf(m) >= 0) return;
+      if (monthExcl.indexOf(m) >= 0) return;
+      var amt = (monthOvrd[m] !== undefined) ? monthOvrd[m] : g.monthAmounts[m];
+      total += amt;
+      count++;
+    });
+    return count ? total / count : 0;
+  }
+  return g.monthlyEquiv;
+}
+function computeVarDrawerEffective(drawerId) {
+  var byMonth   = (VAR_MONTH_DATA && VAR_MONTH_DATA[drawerId]) || {};
+  var monthExcl = (state.varMonthExclusions || {})[drawerId] || {};
+  var monthOvrd = (state.varMonthOverrides  || {})[drawerId] || {};
+  var total = 0, count = 0;
+  FULL_MONTHS.forEach(function(m) {
+    if (byMonth[m] === undefined) return;
+    if (state.globalMonthExclusions.indexOf(m) >= 0) return;
+    if (monthExcl[m] === true) return;
+    var amt = (monthOvrd[m] !== undefined) ? monthOvrd[m] : byMonth[m];
+    total += amt;
+    count++;
+  });
+  return count ? Math.round(total / count) : (VAR_AVGS[drawerId] || 0);
+}
+function toggleVarExpand(drawerId) {
+  if (!state.expandedVarDrawers) state.expandedVarDrawers = {};
+  state.expandedVarDrawers[drawerId] = !state.expandedVarDrawers[drawerId];
+  saveState();
+  var expanded = !!state.expandedVarDrawers[drawerId];
+  document.querySelectorAll('.var-month-row-' + drawerId).forEach(function(r) {
+    r.classList.toggle('hidden', !expanded);
+  });
+  var btn = document.getElementById('var-expand-btn-' + drawerId);
+  if (btn) btn.innerHTML = expanded ? '▲ הסתר חודשים' : '▼ פירוט חודשי';
+}
+function toggleVarMonthExpand(drawerId, month) {
+  if (!state.expandedVarMonths) state.expandedVarMonths = {};
+  var key = drawerId + '-' + month;
+  state.expandedVarMonths[key] = !state.expandedVarMonths[key];
+  saveState();
+  var expanded = !!state.expandedVarMonths[key];
+  document.querySelectorAll('.var-txn-row-' + key).forEach(function(r) {
+    r.classList.toggle('hidden', !expanded);
+  });
+  var btn = document.getElementById('var-mexp-' + key);
+  if (btn) btn.textContent = expanded ? '▲' : '▶';
+}
+function toggleVarBizExpand(did, month, name) {
+  if (!state.expandedVarBiz) state.expandedVarBiz = {};
+  var key = did + '|' + month + '|' + name;
+  state.expandedVarBiz[key] = !state.expandedVarBiz[key];
+  saveState();
+  var expanded = !!state.expandedVarBiz[key];
+  document.querySelectorAll('[data-vbiz="' + key.replace(/\\/g,'\\\\').replace(/"/g,'\\"') + '"]').forEach(function(r) {
+    r.classList.toggle('hidden', !expanded);
+  });
+  var btn = document.querySelector('[data-vbiz-btn="' + key.replace(/\\/g,'\\\\').replace(/"/g,'\\"') + '"]');
+  if (btn) btn.textContent = expanded ? '▲' : '▶';
+}
+function toggleVarMonth(drawerId, month, checked) {
+  if (!state.varMonthExclusions) state.varMonthExclusions = {};
+  if (!state.varMonthExclusions[drawerId]) state.varMonthExclusions[drawerId] = {};
+  state.varMonthExclusions[drawerId][month] = !checked;
+  saveState(); renderVariableDrawers(); refreshDashboard();
+}
+function onVarMonthOv(drawerId, month, val) {
+  if (!state.varMonthOverrides) state.varMonthOverrides = {};
+  if (!state.varMonthOverrides[drawerId]) state.varMonthOverrides[drawerId] = {};
+  var n = parseFloat(val);
+  if (isNaN(n) || val === '') delete state.varMonthOverrides[drawerId][month];
+  else state.varMonthOverrides[drawerId][month] = n;
+  saveState(); renderVariableDrawers(); refreshDashboard();
+}
+function computeFixedBreakdown() {
+  var monthly = 0, periodic = 0;
+  var allFixed = RECURRING_DATA.concat(state.manualFixed || []);
+  allFixed.forEach(function(g) {
+    var amt = computeFixedItemEffective(g);
+    if (g.isMonthly) monthly += amt; else periodic += amt;
+  });
+  return { monthly: monthly, periodic: periodic };
+}
+function updateFixedSummary() {
+  var bd    = computeFixedBreakdown();
+  var raw   = bd.monthly + bd.periodic;
+  var total = state.fixedOverride != null ? state.fixedOverride : raw;
+  document.getElementById('fixed-total-display').textContent   = fmt(total);
+  document.getElementById('fixed-monthly-display').textContent  = fmt(bd.monthly);
+  document.getElementById('fixed-periodic-display').textContent = fmt(bd.periodic);
+  if (state.fixedOverride != null) document.getElementById('fixed-override').value = state.fixedOverride;
+}
+function getFixedValue() {
+  if (state.fixedOverride != null) return state.fixedOverride;
+  var bd = computeFixedBreakdown();
+  return bd.monthly + bd.periodic;
+}
+function getFixedBreakdown() {
+  var bd = computeFixedBreakdown();
+  if (state.fixedOverride != null) {
+    var raw = bd.monthly + bd.periodic;
+    var r = raw > 0 ? state.fixedOverride / raw : 0;
+    return { monthly: bd.monthly * r, periodic: bd.periodic * r };
+  }
+  return bd;
+}
+function onFixedOverride() {
+  var v = parseFloat(document.getElementById('fixed-override').value);
+  state.fixedOverride = isNaN(v) ? null : v;
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+function clearFixedOverride() {
+  state.fixedOverride = null;
+  document.getElementById('fixed-override').value = '';
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+
+// ── FIXED: RENDER DRAWERS WITH PER-MONTH EXPANSION ────────────────────────
+function renderFixedDrawers() {
+  var allFixed = RECURRING_DATA.concat(state.manualFixed || []);
+  var byDrawer = {};
+  FIXED_DRAWERS.forEach(function(d) { byDrawer[d.id] = []; });
+  allFixed.forEach(function(g) {
+    var did = g.drawer || 'other_fixed';
+    if (!byDrawer[did]) did = 'other_fixed';
+    byDrawer[did].push(g);
+  });
+
+  var html = '<div class="space-y-3">';
+  FIXED_DRAWERS.forEach(function(d) {
+    var items = byDrawer[d.id] || [];
+    if (items.length === 0 && d.id !== 'other_fixed') return;
+    var drawerTotal = items.reduce(function(s, g) { return s + computeFixedItemEffective(g); }, 0);
+    var isOpen = state.drawerOpen[d.id] !== false;
+
+    html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-' + d.color + '">';
+    // Drawer header
+    html += '<div id="dh-' + d.id + '" class="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 ' + (isOpen ? 'open' : '') + '" onclick="toggleDrawer(&#39;' + d.id + '&#39;)">';
+    html += '<div class="flex items-center gap-3">';
+    html += '<span class="text-xl">' + d.icon + '</span>';
+    html += '<span class="font-semibold text-slate-700">' + d.label + '</span>';
+    html += '<span class="chip chip-' + d.color + ' text-xs">' + items.length + ' פריטים</span>';
+    html += '</div>';
+    html += '<div class="flex items-center gap-3">';
+    html += '<span class="font-bold text-slate-700">' + fmt(drawerTotal) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
+    html += '<span class="chevron text-slate-400 text-sm">&#9660;</span>';
+    html += '</div></div>';
+
+    // Drawer body
+    html += '<div id="db-' + d.id + '" class="drawer-body ' + (isOpen ? 'open' : 'closed') + '">';
+    if (items.length === 0) {
+      html += '<div class="px-5 py-4 text-slate-300 text-sm text-center">אין פריטים. לחץ "+ הוסף הוצאה".</div>';
+    } else {
+      html += '<table class="w-full text-sm">';
+      html += '<thead><tr class="bg-slate-50 text-slate-400 text-xs">';
+      html += '<th class="px-4 py-2 text-right w-10">כלול</th>';
+      html += '<th class="px-4 py-2 text-right">שם</th>';
+      html += '<th class="px-4 py-2 text-right hide-mobile">תדירות</th>';
+      html += '<th class="px-4 py-2 text-right hide-mobile">חודשים</th>';
+      html += '<th class="px-4 py-2 text-left">₪/חודש</th>';
+      html += '</tr></thead><tbody>';
+
+      items.forEach(function(g) {
+        var gid      = esc(g.id);
+        var ex       = state.fixedExclusions.indexOf(g.id) >= 0;
+        var ov       = state.fixedOverrides[g.id];
+        var expanded = !!state.expandedFixedItems[g.id];
+        var amt      = computeFixedItemEffective(g);
+        var bc       = g.isMonthly ? 'chip-blue' : 'chip-amber';
+        var bt       = g.isMonthly ? 'חודשי שוטף' : 'תקופתי';
+        var frac     = g.monthAmounts ? trendFrac(g.monthAmounts) : null;
+
+        // Item row
+        html += '<tr class="' + (ex ? 'opacity-40' : '') + '" data-gid="' + gid + '">';
+        html += '<td class="px-4 py-2"><input type="checkbox" ' + (ex ? '' : 'checked') + ' onchange="toggleFixed(&#39;' + gid + '&#39;,this.checked)"></td>';
+        html += '<td class="px-4 py-2 text-slate-800">';
+        html += '<div class="flex items-center gap-1.5">';
+        html += '<button class="item-expand-btn" onclick="toggleFixedExpand(&#39;' + gid + '&#39;)" title="פירוט חודשי">' + (expanded ? '&#9650;' : '&#9660;') + '</button>';
+        html += '<span class="truncate max-w-xs cursor-pointer hover:text-blue-600" onclick="toggleFixedExpand(&#39;' + gid + '&#39;)" title="' + esc(g.name) + '">' + esc(g.name) + '</span>';
+        if (frac !== null) html += trendHtmlExp(frac);
+        html += '</div></td>';
+        html += '<td class="px-4 py-2 hide-mobile"><span class="chip ' + bc + '">' + bt + '</span></td>';
+        html += '<td class="px-4 py-2 text-slate-400 text-xs hide-mobile">' + (g.monthsPresent || '-') + '/' + N_MONTHS + '</td>';
+        html += '<td class="px-4 py-2 text-left"><input type="number" class="inline-edit' + (ov !== undefined ? ' override-active' : '') + '" value="' + Math.round(amt) + '" data-gid="' + gid + '" onchange="onFixedRowOv(&#39;' + gid + '&#39;,this.value)" title="ממוצע: ' + fmt(g.monthlyEquiv) + '"></td>';
+        html += '</tr>';
+
+        // Month detail rows (hidden by default via the expanded state)
+        if (g.monthAmounts && Object.keys(g.monthAmounts).length > 0) {
+          var monthsWithData = FULL_MONTHS.filter(function(m) { return g.monthAmounts[m] !== undefined; });
+          var mExcl = state.fixedMonthExclusions[g.id] || {};
+          var mOvrd = state.fixedMonthOverrides[g.id]  || {};
+          monthsWithData.forEach(function(m) {
+            var mEx    = (mExcl[m] === true) || (state.globalMonthExclusions.indexOf(m) >= 0);
+            var gEx    = state.globalMonthExclusions.indexOf(m) >= 0;
+            var mOv    = mOvrd[m];
+            var actual = g.monthAmounts[m];
+            html += '<tr class="month-row-fixed' + (expanded ? '' : ' hidden') + ' item-month-row-' + gid + (mEx ? ' opacity-40' : '') + '">';
+            html += '<td class="px-4">';
+            html += '<input type="checkbox" ' + (mEx ? '' : 'checked') + (gEx ? ' disabled' : '') + ' onchange="toggleFixedMonth(&#39;' + gid + '&#39;,&#39;' + m + '&#39;,this.checked)">';
+            html += '</td>';
+            html += '<td class="px-4 text-slate-600">' + (MONTH_LABELS[m] || m) + (gEx ? ' <span class="text-xs text-red-400">(גלובלי)</span>' : '') + '</td>';
+            html += '<td class="px-4 font-medium text-blue-700">' + fmt(actual) + '</td>';
+            html += '<td class="px-4" colspan="2"><input type="number" class="ov-input' + (mOv !== undefined ? ' override-active' : '') + '" value="' + (mOv !== undefined ? Math.round(mOv) : '') + '" placeholder="' + Math.round(actual) + '" onchange="onFixedMonthOv(&#39;' + gid + '&#39;,&#39;' + m + '&#39;,this.value)"></td>';
+            html += '</tr>';
+          });
+        }
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+  document.getElementById('fixed-drawers').innerHTML = html;
+  updateFixedSummary();
+}
+
+// ── FIXED: INTERACTIONS ────────────────────────────────────────────────────
+function toggleFixed(id, checked) {
+  if (checked) state.fixedExclusions = state.fixedExclusions.filter(function(x) { return x !== id; });
+  else if (state.fixedExclusions.indexOf(id) < 0) state.fixedExclusions.push(id);
+  saveState();
+  var row = document.querySelector('[data-gid="' + id + '"]');
+  if (row) { row.classList.toggle('opacity-40', !checked); var cb = row.querySelector('input[type=checkbox]'); if (cb) cb.checked = checked; }
+  updateFixedSummary(); refreshDashboard();
+}
+function onFixedRowOv(id, val) {
+  var n = parseFloat(val);
+  if (isNaN(n)) delete state.fixedOverrides[id]; else state.fixedOverrides[id] = n;
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+function toggleFixedExpand(id) {
+  state.expandedFixedItems[id] = !state.expandedFixedItems[id];
+  saveState();
+  var expanded = !!state.expandedFixedItems[id];
+  // Toggle all month rows for this item
+  var rows = document.querySelectorAll('.item-month-row-' + id);
+  for (var i = 0; i < rows.length; i++) {
+    rows[i].classList.toggle('hidden', !expanded);
+  }
+  // Update expand button icon
+  var row = document.querySelector('[data-gid="' + id + '"]');
+  if (row) {
+    var btn = row.querySelector('.item-expand-btn');
+    if (btn) btn.innerHTML = expanded ? '&#9650;' : '&#9660;';
+  }
+}
+function toggleFixedMonth(gid, month, checked) {
+  if (!state.fixedMonthExclusions[gid]) state.fixedMonthExclusions[gid] = {};
+  state.fixedMonthExclusions[gid][month] = !checked;
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+function onFixedMonthOv(gid, month, val) {
+  if (!state.fixedMonthOverrides[gid]) state.fixedMonthOverrides[gid] = {};
+  var n = parseFloat(val);
+  if (isNaN(n) || val === '') delete state.fixedMonthOverrides[gid][month];
+  else state.fixedMonthOverrides[gid][month] = n;
+  saveState(); updateFixedSummary(); refreshDashboard();
+}
+
+// ── VARIABLE DRAWERS ───────────────────────────────────────────────────────
+function renderVariableDrawers() {
+  var html = '<div class="space-y-3">';
+  VAR_DRAWERS.forEach(function(d) {
+    var avg          = VAR_AVGS[d.id]  || 0;
+    var trend        = VAR_TREND[d.id] || 0;
+    var effectiveAmt = computeVarDrawerEffective(d.id);
+    var budget       = state.varBudgets[d.id] || null;
+    var displayAmt   = budget != null ? budget : effectiveAmt;
+    var isOpen       = state.drawerOpen['v_' + d.id] !== false;
+    var trendPct     = avg > 0 ? Math.round(((trend - avg) / avg) * 100) : 0;
+    var trendLabel   = trendPct > 5 ? '\u2191 מגמת עלייה' : trendPct < -5 ? '\u2193 מגמת ירידה' : 'יציב';
+    var trendColor   = trendPct > 5 ? 'text-red-500' : trendPct < -5 ? 'text-green-600' : 'text-slate-400';
+    var vExpanded    = !!(state.expandedVarDrawers || {})[d.id];
+
+    html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-' + d.color + '">';
+    html += '<div id="dh-v_' + d.id + '" class="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 ' + (isOpen ? 'open' : '') + '" onclick="toggleDrawer(&#39;v_' + d.id + '&#39;)">';
+    html += '<div class="flex items-center gap-3">';
+    html += '<span class="text-xl">' + d.icon + '</span>';
+    html += '<span class="font-semibold text-slate-700">' + d.label + '</span>';
+    html += '<span class="chip chip-' + d.color + '">ממוצע ' + fmt(avg) + '</span>';
+    html += '</div>';
+    html += '<div class="flex items-center gap-3">';
+    html += '<span class="text-xs ' + trendColor + ' hide-mobile">' + trendLabel + '</span>';
+    html += '<span class="font-bold text-slate-700">' + fmt(displayAmt) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
+    html += '<span class="chevron text-slate-400 text-sm">&#9660;</span>';
+    html += '</div></div>';
+
+    html += '<div id="db-v_' + d.id + '" class="drawer-body ' + (isOpen ? 'open' : 'closed') + '">';
+    html += '<div class="px-5 py-4 space-y-4">';
+    html += '<div class="flex flex-wrap gap-4 items-center">';
+    html += '<div><div class="text-xs text-slate-400 mb-1">ממוצע היסטורי (9 חודשים)</div><div class="text-lg font-bold text-slate-600">' + fmt(avg) + '</div></div>';
+    html += '<div><div class="text-xs text-slate-400 mb-1">ממוצע 3 חודשים אחרונים</div><div class="text-lg font-semibold ' + trendColor + '">' + fmt(trend) + '</div></div>';
+    html += '<div class="flex-1 max-w-48"><div class="text-xs text-slate-400 mb-1">תקציב חודשי יעד</div>';
+    html += '<input type="number" class="inline-edit ' + (budget != null ? 'override-active' : '') + ' w-24" value="' + (budget != null ? budget : '') + '" placeholder="' + Math.round(effectiveAmt) + '" onchange="setVarBudget(&#39;' + d.id + '&#39;,this.value)">';
+    html += '</div></div>';
+    if (budget != null && budget > 0) {
+      var fillPct = Math.min(100, Math.round((effectiveAmt / budget) * 100));
+      var fillClass = fillPct < 80 ? 'prog-ok' : fillPct < 100 ? 'prog-warn' : 'prog-over';
+      html += '<div>';
+      html += '<div class="flex justify-between text-xs text-slate-400 mb-1"><span>ממוצע: ' + fmt(effectiveAmt) + '</span><span>יעד: ' + fmt(budget) + '</span></div>';
+      html += '<div class="progress-track"><div class="progress-fill ' + fillClass + '" style="width:' + fillPct + '%"></div></div>';
+      html += '<div class="text-xs mt-1 ' + (fillPct >= 100 ? 'text-red-500' : fillPct >= 80 ? 'text-amber-500' : 'text-green-600') + '">' + fillPct + '% מהתקציב</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="text-xs text-slate-300 italic">הגדר תקציב יעד לראות את מד ההתקדמות</div>';
+    }
+
+    // פירוט חודשי
+    var byMonth   = (VAR_MONTH_DATA && VAR_MONTH_DATA[d.id]) || {};
+    var byTxn     = (VAR_TXN_DATA   && VAR_TXN_DATA[d.id])   || {};
+    var months    = FULL_MONTHS.filter(function(m) { return byMonth[m] !== undefined; });
+    var mExclMap  = (state.varMonthExclusions || {})[d.id] || {};
+    var mOvrdMap  = (state.varMonthOverrides  || {})[d.id] || {};
+    var mExpandMap = state.expandedVarMonths || {};
+    // חישוב סטיית תקן לסימון חריגים
+    var mVals = months.map(function(mx) { return byMonth[mx]; });
+    var mMean = mVals.reduce(function(s,v){ return s+v; }, 0) / (mVals.length || 1);
+    var mSd   = Math.sqrt(mVals.reduce(function(s,v){ return s+(v-mMean)*(v-mMean); }, 0) / (mVals.length || 1));
+    if (months.length > 0) {
+      html += '<div>';
+      html += '<button id="var-expand-btn-' + d.id + '" class="text-xs text-blue-500 hover:underline" onclick="toggleVarExpand(&#39;' + d.id + '&#39;)">';
+      html += vExpanded ? '▲ הסתר חודשים' : '▼ פירוט חודשי';
+      html += '</button>';
+      html += '<table class="w-full text-sm mt-2"><thead><tr class="bg-slate-50 text-slate-400 text-xs">';
+      html += '<th class="px-3 py-1 text-right w-10">כלול</th>';
+      html += '<th class="px-3 py-1 text-right">חודש</th>';
+      html += '<th class="px-3 py-1 text-left">סכום</th>';
+      html += '<th class="px-3 py-1 text-left hide-mobile">דריסה</th>';
+      html += '</tr></thead><tbody>';
+      months.forEach(function(m) {
+        var gEx     = state.globalMonthExclusions.indexOf(m) >= 0;
+        var mEx     = (mExclMap[m] === true) || gEx;
+        var mOv     = mOvrdMap[m];
+        var actual  = byMonth[m];
+        var txns    = byTxn[m] || [];
+        var mKey      = d.id + '-' + m;
+        var mExp      = !!mExpandMap[mKey];
+        var rowVis    = vExpanded ? '' : ' hidden';
+        var isOutlier = mSd > 0 && Math.abs(actual - mMean) > 1.5 * mSd;
+
+        // שורת חודש
+        html += '<tr class="var-month-row-' + d.id + rowVis + (mEx ? ' opacity-40' : '') + (isOutlier ? ' bg-amber-50' : '') + '">';
+        html += '<td class="px-3 py-1"><input type="checkbox" ' + (mEx ? '' : 'checked') + (gEx ? ' disabled' : '') + ' onchange="toggleVarMonth(&#39;' + d.id + '&#39;,&#39;' + m + '&#39;,this.checked)"></td>';
+        html += '<td class="px-3 py-1 text-slate-600">';
+        if (txns.length > 0) {
+          html += '<button id="var-mexp-' + mKey + '" class="text-slate-400 text-xs mr-1" onclick="toggleVarMonthExpand(&#39;' + d.id + '&#39;,&#39;' + m + '&#39;)" title="' + txns.length + ' עסקאות">' + (mExp ? '▲' : '▶') + '</button>';
+        }
+        html += (MONTH_LABELS[m] || m) + (gEx ? ' <span class="text-xs text-red-400">(גלובלי)</span>' : '') + (isOutlier ? ' <span class="text-amber-500" title="חריג מהממוצע">⚠</span>' : '');
+        html += '</td>';
+        html += '<td class="px-3 py-1 font-medium text-blue-700">' + fmt(actual) + '</td>';
+        html += '<td class="px-3 py-1 hide-mobile"><input type="number" class="ov-input' + (mOv !== undefined ? ' override-active' : '') + '" value="' + (mOv !== undefined ? Math.round(mOv) : '') + '" placeholder="' + Math.round(actual) + '" onchange="onVarMonthOv(&#39;' + d.id + '&#39;,&#39;' + m + '&#39;,this.value)"></td>';
+        html += '</tr>';
+
+        // שורות עסקאות (מוסתרות עד להרחבה)
+        if (txns.length > 0) {
+          html += '<tr class="var-txn-row-' + mKey + rowVis + (mExp ? '' : ' hidden') + '">';
+          html += '<td></td><td colspan="3" class="px-4 pb-2">';
+          html += '<div class="border-r-2 border-blue-100 pr-2 space-y-0">';
+          txns.forEach(function(grp) {
+            var bizKey     = d.id + '|' + m + '|' + grp.name;
+            var bizExpanded = !!(state.expandedVarBiz || {})[bizKey];
+            var hasSubs    = grp.count > 1;
+            var monthCount = (VAR_BIZ_COUNT[d.id] || {})[grp.name] || 0;
+            // שורת עסק
+            html += '<div class="flex justify-between text-xs text-slate-600 py-1 border-b border-slate-50 items-center">';
+            html += '<span class="flex gap-1.5 min-w-0 items-center">';
+            if (hasSubs) {
+              html += '<button data-vbiz-btn="' + esc(bizKey) + '" class="text-slate-400 shrink-0 text-xs" onclick="toggleVarBizExpand(&#39;' + esc(d.id) + '&#39;,&#39;' + esc(m) + '&#39;,&#39;' + esc(grp.name) + '&#39;)">' + (bizExpanded ? '▲' : '▶') + '</button>';
+            } else {
+              html += '<span class="text-slate-200 shrink-0">—</span>';
+            }
+            html += '<span class="truncate font-medium" title="' + esc(grp.name) + '">' + esc(grp.name) + '</span>';
+            if (hasSubs) html += '<span class="chip chip-gray shrink-0 text-xs">' + grp.count + 'x</span>';
+            if (monthCount >= 4) html += '<span class="chip chip-green shrink-0 text-xs" title="מופיע ב-' + monthCount + ' חודשים — שקול להעביר לקבועות">חוזר</span>';
+            html += '</span>';
+            html += '<span class="font-semibold text-slate-800 shrink-0">' + fmt(grp.total) + '</span>';
+            html += '</div>';
+            // שורות עסקאות בודדות (מוסתרות)
+            if (hasSubs) {
+              grp.txns.forEach(function(txn) {
+                var dt = txn.date ? txn.date.slice(8,10) + '/' + txn.date.slice(5,7) : '';
+                html += '<div data-vbiz="' + esc(bizKey) + '" class="flex justify-between text-xs text-slate-400 pr-6 py-0.5' + (bizExpanded ? '' : ' hidden') + '">';
+                html += '<span class="text-slate-300">' + dt + '</span>';
+                html += '<span>' + fmt(txn.amt) + '</span>';
+                html += '</div>';
+              });
+            }
+          });
+          html += '</div></td></tr>';
+        }
+      });
+      html += '</tbody></table></div>';
+    }
+
+    html += '</div></div></div>';
+  });
+  html += '</div>';
+  document.getElementById('variable-drawers').innerHTML = html;
+  updateVarSummary();
+}
+function setVarBudget(id, val) {
+  var n = parseFloat(val);
+  if (isNaN(n) || n <= 0) delete state.varBudgets[id]; else state.varBudgets[id] = n;
+  saveState(); renderVariableDrawers(); refreshDashboard();
+}
+function updateVarSummary() {
+  var totalEffective = 0, totalBudget = 0, hasBudget = false;
+  VAR_DRAWERS.forEach(function(d) {
+    totalEffective += computeVarDrawerEffective(d.id);
+    if (state.varBudgets[d.id]) { totalBudget += state.varBudgets[d.id]; hasBudget = true; }
+  });
+  document.getElementById('var-total-display').textContent  = fmt(totalEffective);
+  document.getElementById('var-budget-display').textContent = hasBudget ? fmt(totalBudget) : 'לא הוגדר';
+}
+
+// ── ACCUMULATED / GOALS ────────────────────────────────────────────────────
+function renderAccumDrawers() {
+  var html = '';
+  ACCUM_DRAWERS_DEF.forEach(function(d) {
+    var ag      = state.accumGoals[d.id] || {annual:0};
+    var monthly = Math.round((ag.annual || 0) / 12);
+    html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-' + d.color + '">';
+    html += '<div class="px-5 py-4 flex flex-wrap gap-4 items-center">';
+    html += '<span class="text-2xl">' + d.icon + '</span>';
+    html += '<div class="flex-1"><div class="font-semibold text-slate-700 mb-0.5">' + d.label + '</div><div class="text-xs text-slate-400">' + d.hint + '</div></div>';
+    html += '<div class="flex flex-wrap gap-4 items-center">';
+    html += '<div><div class="text-xs text-slate-400 mb-1">סכום שנתי ₪</div>';
+    html += '<input type="number" class="inline-edit w-28" value="' + (ag.annual || '') + '" placeholder="0" oninput="updateAccum(&#39;' + d.id + '&#39;,this.value)"></div>';
+    html += '<div class="text-center"><div class="text-xs text-slate-400 mb-1">&#247; 12 = חודשי</div>';
+    html += '<div class="font-bold text-violet-700 text-lg" id="accum-monthly-' + d.id + '">' + fmt(monthly) + '</div></div>';
+    html += '</div></div></div>';
+  });
+  document.getElementById('accum-drawers').innerHTML = html;
+}
+function updateAccum(id, val) {
+  var n = parseFloat(val) || 0;
+  if (!state.accumGoals[id]) state.accumGoals[id] = {};
+  state.accumGoals[id].annual = n;
+  var el = document.getElementById('accum-monthly-' + id);
+  if (el) el.textContent = fmt(Math.round(n / 12));
+  saveState(); renderGoalsTab(); refreshDashboard();
+}
+function getAccumTotal() {
+  return ACCUM_DRAWERS_DEF.reduce(function(s, d) { return s + Math.round((state.accumGoals[d.id] && state.accumGoals[d.id].annual || 0) / 12); }, 0);
+}
+
+// ── MANUAL GOALS ───────────────────────────────────────────────────────────
+function renderGoalsTab() {
+  renderAccumDrawers();
+  var tbody = document.getElementById('goals-tbody');
+  if (state.goals.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-300 py-8 text-sm">לחץ "+ הוסף יעד"</td></tr>';
+  } else {
+    var html = '';
+    state.goals.forEach(function(g) {
+      var monthly = Math.round((g.annual || 0) / 12);
+      html += '<tr>';
+      html += '<td class="px-4 py-2"><input type="text" value="' + esc(g.name) + '" placeholder="שם היעד..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:border-blue-400" onchange="updateGoal(&#39;' + g.id + '&#39;,&#39;name&#39;,this.value)"></td>';
+      html += '<td class="px-4 py-2 text-center"><input type="number" value="' + (g.annual || '') + '" placeholder="0" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-28 text-center focus:outline-none focus:border-blue-400" oninput="updateGoal(&#39;' + g.id + '&#39;,&#39;annual&#39;,this.value)"></td>';
+      html += '<td class="px-4 py-2 text-left font-bold text-violet-700" id="goal-m-' + g.id + '">' + fmt(monthly) + '</td>';
+      html += '<td class="px-4 py-2 text-center"><button onclick="deleteGoal(&#39;' + g.id + '&#39;)" class="text-slate-300 hover:text-red-500 text-xl leading-none">&times;</button></td>';
+      html += '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+  updateGoalsSummary();
+}
+function addGoal() {
+  state.goals.push({ id: 'g' + Date.now(), name: '', annual: 0 });
+  saveState(); renderGoalsTab();
+  setTimeout(function() { var inputs = document.querySelectorAll('#goals-tbody input[type=text]'); if (inputs.length) inputs[inputs.length-1].focus(); }, 50);
+}
+function updateGoal(id, field, val) {
+  var g = state.goals.filter(function(x) { return x.id === id; })[0];
+  if (!g) return;
+  g[field] = field === 'annual' ? (parseFloat(val) || 0) : val;
+  if (field === 'annual') { var el = document.getElementById('goal-m-' + id); if (el) el.textContent = fmt(Math.round(g.annual / 12)); }
+  saveState(); updateGoalsSummary(); refreshDashboard();
+}
+function deleteGoal(id) { state.goals = state.goals.filter(function(x) { return x.id !== id; }); saveState(); renderGoalsTab(); refreshDashboard(); }
+function updateGoalsSummary() { document.getElementById('goals-total-display').textContent = fmt(getGoalsValue()); }
+function getGoalsValue() {
+  var manual = state.goals.reduce(function(s, g) { return s + Math.round((g.annual || 0) / 12); }, 0);
+  return manual + getAccumTotal();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────
+function renderProgressBars() {
+  var progressDrawers = [{id:'supermarket',icon:'🛒'},{id:'fuel',icon:'⛽'},{id:'kids',icon:'👶'},{id:'entertainment',icon:'🎭'},{id:'shopping',icon:'🛍️'}];
+  var html = '';
+  progressDrawers.forEach(function(d) {
+    var def    = VAR_DRAWERS.filter(function(x) { return x.id === d.id; })[0];
+    if (!def) return;
+    var avg    = VAR_AVGS[d.id]  || 0;
+    var budget = state.varBudgets[d.id] || null;
+    var fillPct = budget && budget > 0 ? Math.min(100, Math.round((avg / budget) * 100)) : null;
+    var fillClass = fillPct == null ? 'prog-ok' : fillPct < 80 ? 'prog-ok' : fillPct < 100 ? 'prog-warn' : 'prog-over';
+    html += '<div class="mb-5">';
+    html += '<div class="flex justify-between items-center mb-1.5">';
+    html += '<span class="text-sm font-medium text-slate-700 dash-link" onclick="goToTab(\'variable\')">' + d.icon + ' ' + def.label + '</span>';
+    html += '<span class="text-sm text-slate-500">' + fmt(avg) + (budget ? ' / ' + fmt(budget) : '') + '</span>';
+    html += '</div>';
+    html += '<div class="progress-track">';
+    if (fillPct != null) html += '<div class="progress-fill ' + fillClass + '" style="width:' + fillPct + '%"></div>';
+    else html += '<div class="progress-fill prog-ok" style="width:60%;opacity:.3"></div>';
+    html += '</div>';
+    if (fillPct != null) html += '<div class="text-xs mt-1 ' + (fillPct >= 100 ? 'text-red-500' : fillPct >= 80 ? 'text-amber-500' : 'text-green-600') + '">' + fillPct + '% מהתקציב</div>';
+    else html += '<div class="text-xs mt-1 text-slate-300">הגדר תקציב בטאב "משתנות" לראות %</div>';
+    html += '</div>';
+  });
+  document.getElementById('progress-bars').innerHTML = html;
+}
+function refreshDashboard() {
+  var income    = getIncomeValue();
+  var fixed     = getFixedValue();
+  var bd        = getFixedBreakdown();
+  var goals     = getGoalsValue();
+  var afterFixed = income - fixed;
+  var free      = afterFixed - goals;
+
+  document.getElementById('d-income').textContent = fmt(income);
+  document.getElementById('d-fixed').textContent  = fmt(fixed);
+  document.getElementById('d-goals').textContent  = fmt(goals);
+  document.getElementById('dash-income').textContent    = fmt(income);
+  document.getElementById('dash-fixed').textContent     = fmt(fixed);
+  document.getElementById('dash-fixed-m').textContent   = fmt(bd.monthly);
+  document.getElementById('dash-fixed-p').textContent   = fmt(bd.periodic);
+  document.getElementById('dash-after-fixed').textContent = fmt(afterFixed);
+  document.getElementById('dash-goals').textContent     = fmt(goals);
+  document.getElementById('dash-free').textContent      = fmt(free);
+
+  var freeEl = document.getElementById('dash-result-row');
+  if (freeEl) freeEl.className = free >= 0 ? 'grand-row' : 'deficit-row';
+  document.getElementById('dash-free').style.color     = free >= 0 ? '#065f46' : '#991b1b';
+  document.getElementById('dash-free-label').textContent = free >= 0 ? '\uD83D\uDED2 מגירת הבזבוזים' : '\u26A0\uFE0F גירעון!';
+  document.getElementById('dash-free-sub').textContent   = free >= 0 ? 'פנוי לחיים השוטפים' : 'ההוצאות עולות על ההכנסות';
+  document.getElementById('dash-per-day').textContent  = fmt(free / 30);
+  document.getElementById('dash-per-week').textContent = fmt(free / 4.33);
+  var pct = income > 0 ? Math.round(((goals + bd.periodic) / income) * 100) : 0;
+  document.getElementById('dash-pct').textContent = pct + '%';
+
+  renderProgressBars();
+}
+
+// ── WIZARD ─────────────────────────────────────────────────────────────────
+function wizardOpen()  { document.getElementById('wizard-backdrop').classList.add('open'); wizardReset(); }
+function wizardClose() { document.getElementById('wizard-backdrop').classList.remove('open'); }
+function wizardReset() {
+  document.getElementById('wizard-step1').classList.remove('hidden');
+  document.getElementById('wizard-step2-fixed').classList.add('hidden');
+  document.getElementById('wizard-step2-variable').classList.add('hidden');
+  document.getElementById('wizard-title').textContent = 'הוספת הוצאה';
+}
+function wizardGoStep2(type) {
+  document.getElementById('wizard-step1').classList.add('hidden');
+  if (type === 'fixed') { document.getElementById('wizard-step2-fixed').classList.remove('hidden'); document.getElementById('wizard-title').textContent = 'הוצאה קבועה'; }
+  else { document.getElementById('wizard-step2-variable').classList.remove('hidden'); document.getElementById('wizard-title').textContent = 'הוצאה משתנה'; }
+}
+function wizardBack() { wizardReset(); }
+var VARIABLE_KEYWORDS = ['סופרמרקט','שופרסל','רמי לוי','מגה','קארפור','טיב טעם','דלק','פז','סונול','דור אלון','גז','יכין'];
+function wizardCheckTooltip(val, type) {
+  var lower = val.toLowerCase();
+  var isVar = VARIABLE_KEYWORDS.some(function(k) { return lower.indexOf(k.toLowerCase()) >= 0; });
+  var fTip = document.getElementById('wf-tooltip');
+  var vTip = document.getElementById('wv-tooltip');
+  if (fTip) fTip.style.display = (isVar && type === 'fixed')    ? 'block' : 'none';
+  if (vTip) vTip.style.display = (isVar && type === 'variable') ? 'block' : 'none';
+}
+function wizardSaveFixed() {
+  var name   = document.getElementById('wf-name').value.trim();
+  var amount = parseFloat(document.getElementById('wf-amount').value) || 0;
+  var drawer = document.getElementById('wf-drawer').value;
+  if (!name) return;
+  var item = { id:'mf'+Date.now(), name:name, monthlyEquiv:amount, isMonthly:true, cat:'כללי', drawer:drawer, freq:'חודשי', monthsPresent:1, type:'fixed', manual:true, monthAmounts:{} };
+  if (!state.manualFixed) state.manualFixed = [];
+  state.manualFixed.push(item);
+  saveState(); renderFixedDrawers(); refreshDashboard(); wizardClose();
+}
+function wizardSaveVariable() {
+  var name   = document.getElementById('wv-name').value.trim();
+  var amount = parseFloat(document.getElementById('wv-amount').value) || 0;
+  var drawer = document.getElementById('wv-drawer').value;
+  if (!name) return;
+  if (!state.varBudgets[drawer]) state.varBudgets[drawer] = 0;
+  state.varBudgets[drawer] += amount;
+  if (!state.manualVar) state.manualVar = [];
+  state.manualVar.push({ id:'mv'+Date.now(), name:name, amount:amount, drawer:drawer });
+  saveState(); renderVariableDrawers(); refreshDashboard(); wizardClose();
+}
+document.getElementById('wizard-backdrop').addEventListener('click', function(e) { if (e.target === this) wizardClose(); });
+
+// ── ADD chevron-open CSS rule ──────────────────────────────────────────────
+(function() {
+  var style = document.createElement('style');
+  style.textContent = '.chevron-open { transform: rotate(180deg); }';
+  document.head.appendChild(style);
+})();
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+loadState();
+renderMonthChips();
+renderIncomeDrawers();
+renderFixedDrawers();
+renderVariableDrawers();
+renderGoalsTab();
+refreshDashboard();
+</script>
+</body>
+</html>
