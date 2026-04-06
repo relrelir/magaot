@@ -71,33 +71,38 @@ var INCOME_GROUPS = Object.keys(incomeByName).map(function(key) {
 // ── EXPENSE CLASSIFICATION ─────────────────────────────────────────────────
 // Categories that are always FIXED (regardless of recurrence)
 var FIXED_CAT_MAP = {
-  'ביטוח לאומי': 'insurance',
-  'ביטוח':       'insurance',
-  'משכנתא':      'housing',
-  'ארנונה':      'housing',
-  'חשמל':        'housing',
-  'מים':         'housing',
-  'ועד בית':     'housing',
-  'תקשורת':      'comms',
-  'דיגיטל':      'comms',
-  'השקעה וחיסכון': 'invest',
-  'הלוואה':      'loans'
+  'ביטוח לאומי':    'tashlumim',
+  'ביטוח':          'shonot',       // default; health items overridden by name patterns below
+  'משכנתא':         'bayit',
+  'ארנונה':         'cheshbonot',
+  'חשמל':           'cheshbonot',
+  'מים':            'cheshbonot',
+  'ועד בית':        'cheshbonot',
+  'תקשורת':         'bayit',
+  'דיגיטל':         'bayit',
+  'השקעה וחיסכון':  'pkdonot',
+  'הלוואה':         'tashlumim',
+  'בריאות':         'briut',
+  'פארמה':          'briut'
 };
+
+// Health-related name patterns: if cat=='ביטוח' and name matches → override to 'briut'
+var HEALTH_NAME_PATTERNS = ['בריאות', 'קופת', 'מכבי', 'כללית', 'לאומית', 'רפואה'];
 
 // Categories that are VARIABLE
 var VAR_CAT_MAP = {
   'כלכלה':          'supermarket',
   'מזון':           'supermarket',
-  'רכב':            'fuel',
-  'תחבורה ציבורית': 'fuel',
-  'פנאי':           'entertainment',
-  'אוכל בחוץ':      'entertainment',
-  'תיירות':         'entertainment',
-  'קניות':          'shopping',
-  'ביגוד והנעלה':   'shopping',
-  'קוסמטיקה':       'shopping',
-  'בריאות':         'health',
-  'פארמה':          'health',
+  'אוכל בחוץ':      'restaurants',
+  'פנאי':           'piukkim',
+  'תיירות':         'adventures',
+  'קניות':          'other_var',
+  'ביגוד והנעלה':   'bigud',
+  'קוסמטיקה':       'bigud',
+  'בריאות':         'other_var',
+  'פארמה':          'other_var',
+  'רכב':            'transport',
+  'תחבורה ציבורית': 'transport',
   'ציוד משרדי':     'other_var',
   'חיות מחמד':      'other_var',
   'חוגים':          'kids',
@@ -105,8 +110,14 @@ var VAR_CAT_MAP = {
   'חינוך':          'kids'
 };
 
-// Ambiguous – classify as fixed (other_fixed) only if appear in 4+ months
-var AMBIG_FIXED_CATS = ['כללי', 'העברות', 'תשלומים', 'תרומה', 'מיסים'];
+// Ambiguous – classify as fixed only if appear in 4+ months; map to specific drawer
+var AMBIG_DRAWER_MAP = {
+  'כללי':    'shonot',
+  'העברות':  'shonot',
+  'תשלומים': 'tashlumim',
+  'תרומה':   'shonot',
+  'מיסים':   'tashlumim'
+};
 
 // Always skip (cash / bank-fees / tax-credits)
 var SKIP_CATS = ['מזומן', 'עמלות', 'מס הכנסה', 'שיק'];
@@ -131,9 +142,17 @@ Object.keys(bizGroups).forEach(function(key) {
   var nMonths = Object.keys(g.monthAmounts).length;
 
   if (FIXED_CAT_MAP[cat] && nMonths >= 2) {
-    recurringItems.push({ g: g, drawer: FIXED_CAT_MAP[cat] });
-  } else if (AMBIG_FIXED_CATS.indexOf(cat) >= 0 && nMonths >= 4) {
-    recurringItems.push({ g: g, drawer: 'other_fixed' });
+    var drawer = FIXED_CAT_MAP[cat];
+    // Override: ביטוח items whose name matches health patterns → briut
+    if (cat === 'ביטוח' && drawer === 'shonot') {
+      var nm = (g.name || '').toLowerCase();
+      if (HEALTH_NAME_PATTERNS.some(function(p) { return nm.indexOf(p) >= 0; })) {
+        drawer = 'briut';
+      }
+    }
+    recurringItems.push({ g: g, drawer: drawer });
+  } else if (AMBIG_DRAWER_MAP[cat] && nMonths >= 4) {
+    recurringItems.push({ g: g, drawer: AMBIG_DRAWER_MAP[cat] });
   } else if (VAR_CAT_MAP[cat]) {
     var did = VAR_CAT_MAP[cat];
     if (!varTxnsByDrawer[did]) varTxnsByDrawer[did] = {};
@@ -143,6 +162,24 @@ Object.keys(bizGroups).forEach(function(key) {
     });
   }
   // else: skip
+});
+
+// ── FIXED_TXN_DATA: per-transaction detail for fixed items ────────────────
+var fixedNameToId = {};
+recurringItems.forEach(function(item) {
+  fixedNameToId[item.g.name] = stableId('r', item.g.name);
+});
+
+var fixedTxnData = {}; // itemId → { month → [{id, amt, date, src}] }
+expenses.forEach(function(t) {
+  if (SKIP_CATS.indexOf(t.category) >= 0) return;
+  var nm = normName(t.businessName);
+  var itemId = fixedNameToId[nm];
+  if (!itemId) return;
+  var m = t._month;
+  if (!fixedTxnData[itemId]) fixedTxnData[itemId] = {};
+  if (!fixedTxnData[itemId][m]) fixedTxnData[itemId][m] = [];
+  fixedTxnData[itemId][m].push({ id: t.transactionId, amt: Math.round(Math.abs(t.amount)), date: t.date, src: t.source || '' });
 });
 
 // ── VAR_TXN_DETAILS: transactions grouped by business per drawer per month ───
@@ -155,7 +192,7 @@ expenses.forEach(function(t) {
   if (!varBizGroups[did]) varBizGroups[did] = {};
   if (!varBizGroups[did][m]) varBizGroups[did][m] = {};
   if (!varBizGroups[did][m][nm]) varBizGroups[did][m][nm] = { name: nm, txns: [] };
-  varBizGroups[did][m][nm].txns.push({ amt: Math.round(Math.abs(t.amount)), date: t.date });
+  varBizGroups[did][m][nm].txns.push({ id: t.transactionId, amt: Math.round(Math.abs(t.amount)), date: t.date, src: t.source || '' });
 });
 
 var varTxnDetails = {};
@@ -205,7 +242,7 @@ var RECURRING_DATA = recurringItems.map(function(item) {
 }).sort(function(a, b) { return b.monthlyEquiv - a.monthlyEquiv; });
 
 // ── VAR_AVGS & VAR_TREND ───────────────────────────────────────────────────
-var ALL_VAR_IDS = ['supermarket','fuel','kids','entertainment','shopping','health','other_var'];
+var ALL_VAR_IDS = ['supermarket','restaurants','piukkim','bigud','adventures','transport','kids','other_var'];
 var VAR_AVGS  = {};
 var VAR_TREND = {};
 
@@ -253,6 +290,15 @@ function classifyIncomeGroup(g) {
 
 INCOME_GROUPS.forEach(function(g) { g.drawer = classifyIncomeGroup(g); });
 
+// ── VAR_MAX5: max of last-5 months per drawer ─────────────────────────────
+var VAR_MAX5 = {};
+ALL_VAR_IDS.forEach(function(did) {
+  var byMonth = varTxnsByDrawer[did] || {};
+  var ms = MONTHS.filter(function(m) { return byMonth[m] !== undefined; }).slice(-5);
+  var vals = ms.map(function(m) { return byMonth[m]; });
+  VAR_MAX5[did] = vals.length ? Math.round(Math.max.apply(null, vals)) : 0;
+});
+
 // ── INJECT INTO TEMPLATE ───────────────────────────────────────────────────
 var template = fs.readFileSync('magaot_v3_template.html', 'utf8');
 var out = template
@@ -262,7 +308,9 @@ var out = template
   .replace('VARTREND_PLACEHOLDER',      JSON.stringify(VAR_TREND))
   .replace('VARMONTH_PLACEHOLDER',      JSON.stringify(varTxnsByDrawer))
   .replace('VARTXN_PLACEHOLDER',        JSON.stringify(varTxnDetails))
-  .replace('VARBIZCOUNT_PLACEHOLDER',   JSON.stringify(varBizMonthCount));
+  .replace('VARBIZCOUNT_PLACEHOLDER',   JSON.stringify(varBizMonthCount))
+  .replace('VARMAX5_PLACEHOLDER',       JSON.stringify(VAR_MAX5))
+  .replace('FIXEDTXN_PLACEHOLDER',      JSON.stringify(fixedTxnData));
 
 fs.writeFileSync('magaot_app.html', out, 'utf8');
 
@@ -275,4 +323,5 @@ var totalFixed = RECURRING_DATA.reduce(function(s,r){ return s + r.monthlyEquiv;
 console.log('  Total fixed  : \u20aa' + Math.round(totalFixed).toLocaleString());
 console.log('VAR_AVGS       :', JSON.stringify(VAR_AVGS));
 console.log('VAR_MONTH_DATA :', JSON.stringify(Object.keys(varTxnsByDrawer)));
+console.log('VAR_MAX5       :', JSON.stringify(VAR_MAX5));
 console.log('Output         : magaot_app.html (' + Math.round(out.length/1024) + ' KB)');

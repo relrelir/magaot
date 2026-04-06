@@ -9,7 +9,7 @@ const BASE_DIR = __dirname;
 
 http.createServer((req, res) => {
   const pathname = url.parse(req.url).pathname;
-  const target   = pathname === '/' ? '/magaot.html' : pathname;
+  const target   = pathname === '/' ? '/magaot_app.html' : pathname;
   const file     = path.join(BASE_DIR, target);
 
   fs.readFile(file, (err, data) => {

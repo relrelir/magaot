@@ -120,6 +120,41 @@
   .trend-down-inc { color:#ef4444; font-weight:700; }  /* bad for income */
   .trend-flat { color:#94a3b8; }
 
+  /* ── Predictive Engine / Pacing Bar ── */
+  .pacing-track {
+    position: relative;
+    height: 14px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: visible;
+  }
+  .pacing-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width .6s ease;
+  }
+  .pacing-marker {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 22px;
+    background: #94a3b8;
+    border-radius: 2px;
+  }
+  .pacing-marker::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #64748b;
+  }
+  .forecast-positive { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .forecast-negative { background: #fef2f2; border: 1px solid #fecaca; }
+  .forecast-neutral  { background: #fffbeb; border: 1px solid #fde68a; }
+
   /* ── Dashboard link buttons ── */
   .dash-link { cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
   .dash-link:hover { opacity:.75; }
@@ -174,12 +209,13 @@
           <div>
             <label class="text-xs text-slate-500 block mb-1">מגירה</label>
             <select id="wf-drawer" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-              <option value="housing">🏠 דיור ומיסים</option>
-              <option value="comms">📡 תקשורת</option>
-              <option value="insurance">🛡️ ביטוחים</option>
-              <option value="invest">📈 השקעות</option>
-              <option value="loans">🏦 הלוואות</option>
-              <option value="other_fixed">📌 קבועות אחרות</option>
+              <option value="bayit">🏠 בית</option>
+              <option value="cheshbonot">💡 חשבונות</option>
+              <option value="shonot">📌 שונות</option>
+              <option value="tashlumim">💳 תשלומים</option>
+              <option value="forex">💱 מט"ח</option>
+              <option value="briut">🏥 בריאות</option>
+              <option value="pkdonot">🔒 פקדונות חובה</option>
             </select>
           </div>
         </div>
@@ -241,6 +277,7 @@
     <button class="tab-btn active px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('income',this)">💰 הכנסות</button>
     <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('fixed',this)">📌 קבועות</button>
     <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('variable',this)">🔄 משתנות</button>
+    <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('drawerc',this)">💎 מגירה C — פקדונות</button>
     <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('goals',this)">🏦 יעדים ונצבר</button>
     <button class="tab-btn px-4 py-2.5 text-sm text-slate-500 whitespace-nowrap" onclick="switchTab('dashboard',this)">📊 לוח בקרה</button>
   </div>
@@ -291,12 +328,16 @@
           <div id="fixed-total-display" class="text-xl font-bold text-blue-700">₪0</div>
         </div>
         <div>
-          <div class="text-xs text-slate-400 mb-0.5">חיוב חודשי שוטף</div>
-          <div id="fixed-monthly-display" class="text-lg font-semibold text-slate-600">₪0</div>
+          <div class="flex items-center gap-1 mb-0.5"><span class="text-xs font-bold px-1 py-0.5 rounded bg-blue-100 text-blue-700">A</span><span class="text-xs text-slate-400">קבועות מחויבות</span></div>
+          <div id="fixed-typeA-display" class="text-lg font-semibold text-blue-600">₪0</div>
         </div>
         <div>
-          <div class="text-xs text-slate-400 mb-0.5">נצבר (תקופתי)</div>
-          <div id="fixed-periodic-display" class="text-lg font-semibold text-amber-600">₪0</div>
+          <div class="flex items-center gap-1 mb-0.5"><span class="text-xs font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700">B</span><span class="text-xs text-slate-400">חשבונות</span></div>
+          <div id="fixed-typeB-display" class="text-lg font-semibold text-amber-600">₪0</div>
+        </div>
+        <div>
+          <div class="flex items-center gap-1 mb-0.5"><span class="text-xs font-bold px-1 py-0.5 rounded bg-indigo-100 text-indigo-700">C</span><span class="text-xs text-slate-400">פקדונות חובה</span></div>
+          <div id="fixed-typeC-display" class="text-lg font-semibold text-indigo-600">₪0</div>
         </div>
       </div>
       <div class="flex-1 max-w-xs">
@@ -330,7 +371,21 @@
   </div>
 </div>
 
-<!-- ══════════ TAB 4: GOALS & ACCUMULATED ══════════ -->
+<!-- ══════════ TAB 4: DRAWER C — DEPOSITS ══════════ -->
+<div id="tab-drawerc" class="tab-pane">
+  <div class="data-note">ℹ️ מגירה C — פקדונות. הזן סכום שנתי והמערכת מחשבת את ההפרשה החודשית אוטומטית.</div>
+  <div id="drawerc-content"></div>
+  <div class="sticky-bar mt-4 rounded-xl">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-400 mb-0.5">סה"כ הפרשה חודשית — מגירה C</div>
+        <div id="drawerc-total-display" class="text-2xl font-bold text-violet-700">₪0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TAB 5: GOALS & ACCUMULATED ══════════ -->
 <div id="tab-goals" class="tab-pane">
   <div class="data-note">ℹ️ פקדונות ויעדים — כמה לשים בצד כל חודש. הזנת סכום שנתי מחלקת ל-12 אוטומטית.</div>
   <div class="mb-5 space-y-3" id="accum-drawers"></div>
@@ -365,18 +420,22 @@
 <div id="tab-dashboard" class="tab-pane">
   <div class="data-note">ℹ️ תמונת התזרים המלאה. לחץ על מספר לניווט לטאב המתאים. כל שינוי בטאבים מתעדכן כאן מיידית.</div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
       <div class="text-xs text-green-600 font-semibold mb-1">💰 הכנסה חודשית</div>
       <div class="text-2xl font-black text-green-700 dash-link" id="d-income" onclick="goToTab('income')">₪0</div>
     </div>
     <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
-      <div class="text-xs text-red-600 font-semibold mb-1">📌 הוצאות קבועות</div>
+      <div class="text-xs text-red-600 font-semibold mb-1">📌 קבועות</div>
       <div class="text-2xl font-black text-red-700 dash-link" id="d-fixed" onclick="goToTab('fixed')">₪0</div>
     </div>
     <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-center">
-      <div class="text-xs text-violet-600 font-semibold mb-1">🏦 יעדים ונצבר</div>
-      <div class="text-2xl font-black text-violet-700 dash-link" id="d-goals" onclick="goToTab('goals')">₪0</div>
+      <div class="text-xs text-violet-600 font-semibold mb-1">💎 מגירה C</div>
+      <div class="text-2xl font-black text-violet-700 dash-link" id="d-drawerc" onclick="goToTab('drawerc')">₪0</div>
+    </div>
+    <div class="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
+      <div class="text-xs text-orange-600 font-semibold mb-1">🔄 משתנות</div>
+      <div class="text-2xl font-black text-orange-700 dash-link" id="d-variable" onclick="goToTab('variable')">₪0</div>
     </div>
   </div>
 
@@ -405,8 +464,20 @@
         <span class="font-semibold text-slate-600" id="dash-after-fixed">₪0</span>
       </div>
       <div class="result-row mt-1">
-        <span class="text-slate-600 font-medium">🏦 פחות: יעדים ונצבר</span>
-        <span class="font-bold text-violet-600 dash-link" id="dash-goals" onclick="goToTab('goals')">₪0</span>
+        <span class="text-slate-600 font-medium">💎 פחות: מגירה C (פקדונות)</span>
+        <span class="font-bold text-violet-600 dash-link" id="dash-drawerc" onclick="goToTab('drawerc')">₪0</span>
+      </div>
+      <div class="sub-row">
+        <span>📅 עתידיות</span>
+        <span class="font-medium text-slate-500" id="dash-c-atidiot">₪0</span>
+      </div>
+      <div class="sub-row">
+        <span>🛡️ בלט"מים</span>
+        <span class="font-medium text-slate-500" id="dash-c-biltam">₪0</span>
+      </div>
+      <div class="sub-row mb-1">
+        <span>✨ הגשמה</span>
+        <span class="font-medium text-slate-500" id="dash-c-hagshama">₪0</span>
       </div>
       <div class="border-t-2 border-slate-200 my-3"></div>
       <div id="dash-result-row" class="grand-row">
@@ -416,6 +487,30 @@
         </div>
         <span class="font-black text-2xl text-green-800" id="dash-free">₪0</span>
       </div>
+      <!-- ── Predictive Engine: Forecast + Pacing Bar ── -->
+      <div id="forecast-section" class="mt-3 rounded-xl p-4 forecast-positive" style="display:none">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1">
+            <div class="text-sm font-semibold leading-snug" id="forecast-headline">טוען תחזית...</div>
+            <div class="text-xs text-slate-500 mt-1" id="forecast-burn-rate"></div>
+          </div>
+          <div id="forecast-badge" class="chip chip-green shrink-0 text-xs"></div>
+        </div>
+        <!-- Pacing bar -->
+        <div class="mt-3">
+          <div class="pacing-track">
+            <div class="pacing-fill prog-ok" id="pacing-fill" style="width:0%"></div>
+            <div class="pacing-marker" id="pacing-marker" style="right:50%"></div>
+          </div>
+          <div class="flex justify-between mt-1.5 text-xs text-slate-500">
+            <span id="pacing-label-expected"></span>
+            <span id="pacing-label-actual"></span>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 mt-2" id="forecast-data-note"></div>
+      </div>
+      <!-- ── End Predictive Engine ── -->
+
       <div class="mt-4 grid grid-cols-3 gap-2 text-center text-sm bg-slate-50 rounded-xl p-3">
         <div>
           <div class="text-slate-400 text-xs">ליום</div>
@@ -443,13 +538,15 @@
 
 <script>
 // ── EMBEDDED DATA ──────────────────────────────────────────────────────────
-var INCOME_GROUPS  = INCOME_GROUPS_PLACEHOLDER;
-var RECURRING_DATA = RECURRING_PLACEHOLDER;
-var VAR_AVGS       = VARAVGS_PLACEHOLDER;
-var VAR_TREND      = VARTREND_PLACEHOLDER;
-var VAR_MONTH_DATA = VARMONTH_PLACEHOLDER;
-var VAR_TXN_DATA     = VARTXN_PLACEHOLDER;
-var VAR_BIZ_COUNT    = VARBIZCOUNT_PLACEHOLDER;
+var INCOME_GROUPS       = INCOME_GROUPS_PLACEHOLDER;
+var RECURRING_DATA      = RECURRING_PLACEHOLDER;
+var VAR_AVGS            = VARAVGS_PLACEHOLDER;
+var VAR_TREND           = VARTREND_PLACEHOLDER;
+var VAR_MONTH_DATA      = VARMONTH_PLACEHOLDER;
+var VAR_TXN_DATA        = VARTXN_PLACEHOLDER;
+var VAR_BIZ_COUNT       = VARBIZCOUNT_PLACEHOLDER;
+var VAR_MAX5           = VARMAX5_PLACEHOLDER;
+var FIXED_TXN_DATA     = FIXEDTXN_PLACEHOLDER;
 
 var FULL_MONTHS = ['2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03'];
 var N_MONTHS = 9;
@@ -471,21 +568,23 @@ var INCOME_DRAWERS = [
 
 // ── FIXED / VAR DRAWER DEFINITIONS ─────────────────────────────────────────
 var FIXED_DRAWERS = [
-  { id:'housing',    label:'דיור ומיסים',    icon:'🏠', color:'blue',   cats:['ארנונה','משכנתא','חשמל','מים','ועד בית'] },
-  { id:'comms',      label:'תקשורת',         icon:'📡', color:'indigo', cats:['תקשורת','דיגיטל'] },
-  { id:'insurance',  label:'ביטוחים',        icon:'🛡️', color:'violet', cats:['ביטוח','ביטוח לאומי'] },
-  { id:'invest',     label:'השקעות וחיסכון', icon:'📈', color:'green',  cats:['השקעה וחיסכון'] },
-  { id:'loans',      label:'הלוואות',        icon:'🏦', color:'slate',  cats:['הלוואה'] },
-  { id:'other_fixed',label:'קבועות אחרות',  icon:'📌', color:'gray',   cats:[] }
+  { id:'bayit',      label:'בית',          icon:'🏠', color:'blue',   drawerType:'A', cats:['משכנתא','תקשורת','דיגיטל'] },
+  { id:'cheshbonot', label:'חשבונות',      icon:'💡', color:'amber',  drawerType:'B', cats:['ארנונה','חשמל','מים','ועד בית'] },
+  { id:'shonot',     label:'שונות',        icon:'📌', color:'gray',   drawerType:'A', cats:['כללי','ביטוח','תרומה'] },
+  { id:'tashlumim',  label:'תשלומים',      icon:'💳', color:'slate',  drawerType:'A', cats:['תשלומים','הלוואה','ביטוח לאומי'] },
+  { id:'forex',      label:'מט"ח',         icon:'💱', color:'violet', drawerType:'A', cats:[] },
+  { id:'briut',      label:'בריאות',       icon:'🏥', color:'green',  drawerType:'A', cats:['בריאות'] },
+  { id:'pkdonot',    label:'פקדונות חובה', icon:'🔒', color:'indigo', drawerType:'C', cats:['השקעה וחיסכון'] }
 ];
 var VAR_DRAWERS = [
-  { id:'supermarket',  label:'סופרמרקט',     icon:'🛒', color:'orange', cats:['כלכלה','מזון'] },
-  { id:'fuel',         label:'דלק ותחבורה',  icon:'⛽', color:'amber',  cats:['רכב','תחבורה ציבורית'] },
-  { id:'kids',         label:'הוצאות ילדים', icon:'👶', color:'pink',   cats:['חינוך','חוגים','ספורט'] },
-  { id:'entertainment',label:'בידור ופנאי',  icon:'🎭', color:'purple', cats:['פנאי','אוכל בחוץ'] },
-  { id:'shopping',     label:'קניות',        icon:'🛍️', color:'rose',   cats:['קניות','ביגוד והנעלה','קוסמטיקה'] },
-  { id:'health',       label:'בריאות ופארמה',icon:'💊', color:'teal',   cats:['בריאות','פארמה'] },
-  { id:'other_var',    label:'משתנות אחרות', icon:'📦', color:'gray',   cats:[] }
+  { id:'supermarket', label:'סופרמרקט',   icon:'🛒', color:'orange', cats:['כלכלה','מזון'] },
+  { id:'restaurants', label:'מסעדות',     icon:'🍽️', color:'red',    cats:['אוכל בחוץ'] },
+  { id:'piukkim',     label:'פינוקים',    icon:'🍰', color:'pink',   cats:['פנאי'] },
+  { id:'bigud',       label:'ביגוד',      icon:'👗', color:'rose',   cats:['ביגוד והנעלה','קוסמטיקה'] },
+  { id:'adventures',  label:'הרפתקאות',  icon:'✈️', color:'purple', cats:['תיירות'] },
+  { id:'transport',   label:'תחבורה',     icon:'🚗', color:'amber',  cats:['רכב','תחבורה ציבורית'] },
+  { id:'kids',        label:'ילדים',      icon:'👶', color:'blue',   cats:['חינוך','חוגים','ספורט'] },
+  { id:'other_var',   label:'שונות',      icon:'📦', color:'gray',   cats:[] }
 ];
 var ACCUM_DRAWERS_DEF = [
   { id:'car_annual', label:'טסט וביטוח רכב שנתי', icon:'🚗', color:'sky',   hint:'ביטוח שנתי לרכב + טסט' },
@@ -494,9 +593,9 @@ var ACCUM_DRAWERS_DEF = [
   { id:'home_maint', label:'תחזוקת בית',            icon:'🔧', color:'amber', hint:'תיקונים, ריהוט, שיפוצים' }
 ];
 
-// ── STATE v4 ───────────────────────────────────────────────────────────────
+// ── STATE v6 ───────────────────────────────────────────────────────────────
 var state = {
-  v: 4,
+  v: 6,
   // income
   incomeGroupExclusions: [],
   incomeMonthExclusions: {},
@@ -513,6 +612,7 @@ var state = {
   // shared
   drawerOpen: {},
   varBudgets: {},
+  varBudgetMode: {},
   varMonthExclusions: {},
   varMonthOverrides: {},
   expandedVarDrawers: {},
@@ -520,39 +620,130 @@ var state = {
   expandedVarBiz: {},
   accumGoals: {},
   goals: [],
+  drawerCGoals: [],
   manualFixed: [],
   manualVar: [],
-  globalMonthExclusions: []
+  globalMonthExclusions: [],
+  refundMappings: {},
+  txnReclassifications: {}
 };
 
-function saveState() { try { localStorage.setItem('magaot_v4', JSON.stringify(state)); } catch(e) {} }
+function saveState() { try { localStorage.setItem('magaot_v6', JSON.stringify(state)); } catch(e) {} }
+
+// Drawer ID migration maps for v5→v6
+var FIXED_DRAWER_MIGRATION = { housing:'bayit', comms:'bayit', insurance:'shonot', invest:'pkdonot', loans:'tashlumim', other_fixed:'shonot' };
+var VAR_DRAWER_MIGRATION   = { fuel:'transport', entertainment:'piukkim', shopping:'bigud', health:'other_var' };
+
+function migrateDrawerIds(obj, map) {
+  if (!obj) return {};
+  var out = {};
+  Object.keys(obj).forEach(function(k) { out[map[k] || k] = obj[k]; });
+  return out;
+}
+function migrateDrawerArr(arr, map) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(function(id) { return map[id] || id; });
+}
+
 function loadState() {
   try {
-    var r = localStorage.getItem('magaot_v4');
+    var r = localStorage.getItem('magaot_v6');
     if (!r) {
-      // try migrating from v3
-      var old = localStorage.getItem('magaot_v3');
-      if (old) {
-        var p3 = JSON.parse(old);
-        if (p3.v === 3) {
-          state.fixedExclusions  = p3.fixedExclusions  || [];
-          state.fixedOverrides   = p3.fixedOverrides   || {};
-          state.fixedOverride    = p3.fixedOverride    || null;
-          state.drawerOpen       = p3.drawerOpen       || {};
-          state.varBudgets       = p3.varBudgets       || {};
-          state.accumGoals       = p3.accumGoals       || {};
-          state.goals            = p3.goals            || [];
-          state.manualFixed      = p3.manualFixed      || [];
-          state.manualVar        = p3.manualVar        || [];
-          state.incomeOverride   = p3.incomeOverride   || null;
+      // try migrating from v5
+      var old5 = localStorage.getItem('magaot_v5');
+      if (old5) {
+        var p5 = JSON.parse(old5);
+        if (p5.v === 5) {
+          state.incomeGroupExclusions = p5.incomeGroupExclusions || [];
+          state.incomeMonthExclusions = p5.incomeMonthExclusions || {};
+          state.incomeMonthOverrides  = p5.incomeMonthOverrides  || {};
+          state.incomeOverride        = p5.incomeOverride        || null;
+          state.expandedIncomeGroups  = p5.expandedIncomeGroups  || {};
+          state.fixedExclusions       = migrateDrawerArr(p5.fixedExclusions || [], FIXED_DRAWER_MIGRATION);
+          state.fixedOverrides        = migrateDrawerIds(p5.fixedOverrides   || {}, FIXED_DRAWER_MIGRATION);
+          state.fixedMonthExclusions  = migrateDrawerIds(p5.fixedMonthExclusions || {}, FIXED_DRAWER_MIGRATION);
+          state.fixedMonthOverrides   = migrateDrawerIds(p5.fixedMonthOverrides  || {}, FIXED_DRAWER_MIGRATION);
+          state.fixedOverride         = p5.fixedOverride         || null;
+          state.expandedFixedItems    = p5.expandedFixedItems    || {};
+          state.drawerOpen            = p5.drawerOpen            || {};
+          state.varBudgets            = migrateDrawerIds(p5.varBudgets || {}, VAR_DRAWER_MIGRATION);
+          state.varBudgetMode         = migrateDrawerIds(p5.varBudgetMode || {}, VAR_DRAWER_MIGRATION);
+          state.varMonthExclusions    = migrateDrawerIds(p5.varMonthExclusions || {}, VAR_DRAWER_MIGRATION);
+          state.varMonthOverrides     = migrateDrawerIds(p5.varMonthOverrides  || {}, VAR_DRAWER_MIGRATION);
+          state.expandedVarDrawers    = migrateDrawerIds(p5.expandedVarDrawers || {}, VAR_DRAWER_MIGRATION);
+          state.expandedVarMonths     = migrateDrawerIds(p5.expandedVarMonths  || {}, VAR_DRAWER_MIGRATION);
+          state.expandedVarBiz        = migrateDrawerIds(p5.expandedVarBiz     || {}, VAR_DRAWER_MIGRATION);
+          state.accumGoals            = p5.accumGoals            || {};
+          state.goals                 = p5.goals                 || [];
+          state.drawerCGoals          = p5.drawerCGoals          || [];
+          state.manualFixed           = p5.manualFixed           || [];
+          state.manualVar             = p5.manualVar             || [];
+          state.globalMonthExclusions = p5.globalMonthExclusions || [];
+          state.refundMappings        = p5.refundMappings        || {};
+          state.txnReclassifications  = p5.txnReclassifications  || {};
         }
+      } else {
+      // try migrating from v4
+      var old4 = localStorage.getItem('magaot_v4');
+      if (old4) {
+        var p4 = JSON.parse(old4);
+        if (p4.v === 4) {
+          state.incomeGroupExclusions = p4.incomeGroupExclusions || [];
+          state.incomeMonthExclusions = p4.incomeMonthExclusions || {};
+          state.incomeMonthOverrides  = p4.incomeMonthOverrides  || {};
+          state.incomeOverride        = p4.incomeOverride        || null;
+          state.expandedIncomeGroups  = p4.expandedIncomeGroups  || {};
+          state.fixedExclusions       = migrateDrawerArr(p4.fixedExclusions || [], FIXED_DRAWER_MIGRATION);
+          state.fixedOverrides        = migrateDrawerIds(p4.fixedOverrides   || {}, FIXED_DRAWER_MIGRATION);
+          state.fixedMonthExclusions  = migrateDrawerIds(p4.fixedMonthExclusions || {}, FIXED_DRAWER_MIGRATION);
+          state.fixedMonthOverrides   = migrateDrawerIds(p4.fixedMonthOverrides  || {}, FIXED_DRAWER_MIGRATION);
+          state.fixedOverride         = p4.fixedOverride         || null;
+          state.expandedFixedItems    = p4.expandedFixedItems    || {};
+          state.drawerOpen            = p4.drawerOpen            || {};
+          state.varBudgets            = migrateDrawerIds(p4.varBudgets || {}, VAR_DRAWER_MIGRATION);
+          state.varMonthExclusions    = migrateDrawerIds(p4.varMonthExclusions || {}, VAR_DRAWER_MIGRATION);
+          state.varMonthOverrides     = migrateDrawerIds(p4.varMonthOverrides  || {}, VAR_DRAWER_MIGRATION);
+          state.expandedVarDrawers    = migrateDrawerIds(p4.expandedVarDrawers || {}, VAR_DRAWER_MIGRATION);
+          state.expandedVarMonths     = migrateDrawerIds(p4.expandedVarMonths  || {}, VAR_DRAWER_MIGRATION);
+          state.expandedVarBiz        = migrateDrawerIds(p4.expandedVarBiz     || {}, VAR_DRAWER_MIGRATION);
+          state.accumGoals            = p4.accumGoals            || {};
+          state.goals                 = p4.goals                 || [];
+          state.manualFixed           = p4.manualFixed           || [];
+          state.manualVar             = p4.manualVar             || [];
+          state.globalMonthExclusions = p4.globalMonthExclusions || [];
+          state.drawerCGoals = (p4.goals || []).map(function(g) {
+            return { id: g.id, name: g.name, subCategory: 'hagshama', annualTarget: g.annual || 0, monthlyAllocation: Math.round((g.annual || 0) / 12) };
+          });
+        }
+      } else {
+        var old3 = localStorage.getItem('magaot_v3');
+        if (old3) {
+          var p3 = JSON.parse(old3);
+          if (p3.v === 3) {
+            state.fixedExclusions  = p3.fixedExclusions  || [];
+            state.fixedOverrides   = p3.fixedOverrides   || {};
+            state.fixedOverride    = p3.fixedOverride    || null;
+            state.drawerOpen       = p3.drawerOpen       || {};
+            state.varBudgets       = p3.varBudgets       || {};
+            state.accumGoals       = p3.accumGoals       || {};
+            state.goals            = p3.goals            || [];
+            state.manualFixed      = p3.manualFixed      || [];
+            state.manualVar        = p3.manualVar        || [];
+            state.incomeOverride   = p3.incomeOverride   || null;
+          }
+        }
+      }
       }
     } else {
       var p = JSON.parse(r);
-      if (p.v === 4) state = p;
+      if (p.v === 6) state = p;
     }
   } catch(e) {}
   // ensure defaults
+  if (!state.varBudgetMode)          state.varBudgetMode          = {};
+  if (!state.drawerCGoals)           state.drawerCGoals           = [];
+  if (!state.refundMappings)         state.refundMappings         = {};
+  if (!state.txnReclassifications)   state.txnReclassifications   = {};
   ACCUM_DRAWERS_DEF.forEach(function(d) { if (!state.accumGoals[d.id]) state.accumGoals[d.id] = {annual:0}; });
   FIXED_DRAWERS.forEach(function(d)  { if (state.drawerOpen[d.id] === undefined) state.drawerOpen[d.id] = true; });
   VAR_DRAWERS.forEach(function(d)    { if (state.drawerOpen['v_'+d.id] === undefined) state.drawerOpen['v_'+d.id] = true; });
@@ -609,7 +800,7 @@ function switchTab(name, btn) {
 }
 function goToTab(name) {
   var btns = document.querySelectorAll('.tab-btn');
-  var idx = { income:0, fixed:1, variable:2, goals:3, dashboard:4 }[name] || 0;
+  var idx = { income:0, fixed:1, variable:2, drawerc:3, goals:4, dashboard:5 }[name] || 0;
   if (btns[idx]) switchTab(name, btns[idx]);
 }
 
@@ -665,9 +856,11 @@ function computeGroupEffective(g) {
 }
 function computeIncomeAvg() {
   // Build per-month totals across all active groups, then average over months
+  // Groups marked as refunds (state.refundMappings) are excluded from income total
   var monthTotals = {};
   INCOME_GROUPS.forEach(function(g) {
     if (state.incomeGroupExclusions.indexOf(g.id) >= 0) return;
+    if ((state.refundMappings || {})[g.id]) return; // marked as refund/credit
     var monthExcl = state.incomeMonthExclusions[g.id] || [];
     var monthOvrd = state.incomeMonthOverrides[g.id]  || {};
     FULL_MONTHS.forEach(function(m) {
@@ -681,6 +874,29 @@ function computeIncomeAvg() {
   var ms = Object.keys(monthTotals);
   if (!ms.length) return 0;
   return ms.reduce(function(s, m) { return s + monthTotals[m]; }, 0) / ms.length;
+}
+
+// Get refund credit amount for a target drawer (from all refund-mapped income groups)
+function getRefundCreditForDrawer(drawerId) {
+  var total = 0;
+  INCOME_GROUPS.forEach(function(g) {
+    var mapping = (state.refundMappings || {})[g.id];
+    if (!mapping || mapping.targetDrawer !== drawerId) return;
+    if (state.incomeGroupExclusions.indexOf(g.id) >= 0) return;
+    total += computeGroupEffective(g);
+  });
+  return total;
+}
+
+// Mark/unmark income group as refund
+function markAsRefund(groupId, targetDrawer) {
+  if (!state.refundMappings) state.refundMappings = {};
+  if (targetDrawer) {
+    state.refundMappings[groupId] = { targetDrawer: targetDrawer };
+  } else {
+    delete state.refundMappings[groupId];
+  }
+  saveState(); renderIncomeDrawers(); renderVariableDrawers(); updateFixedSummary(); refreshDashboard();
 }
 function getIncomeValue() {
   return state.incomeOverride != null ? state.incomeOverride : computeIncomeAvg();
@@ -739,17 +955,19 @@ function renderIncomeDrawers() {
     html += '<th class="px-4 py-2 text-right">מקור</th>';
     html += '<th class="px-4 py-2 text-right hide-mobile">חודשים</th>';
     html += '<th class="px-4 py-2 text-left">₪/חודש</th>';
+    html += '<th class="px-4 py-2 text-center hide-mobile">זיכוי</th>';
     html += '</tr></thead><tbody>';
 
     groups.forEach(function(g) {
-      var gid      = esc(g.id);
-      var excluded = state.incomeGroupExclusions.indexOf(g.id) >= 0;
-      var expanded = !!state.expandedIncomeGroups[g.id];
-      var effective = computeGroupEffective(g);
-      var frac      = trendFrac(g.monthAmounts);
+      var gid        = esc(g.id);
+      var excluded   = state.incomeGroupExclusions.indexOf(g.id) >= 0;
+      var expanded   = !!state.expandedIncomeGroups[g.id];
+      var effective  = computeGroupEffective(g);
+      var frac       = trendFrac(g.monthAmounts);
+      var refMapping = (state.refundMappings || {})[g.id];
 
       // Source row
-      html += '<tr class="' + (excluded ? 'opacity-40' : '') + '" data-igid="' + gid + '">';
+      html += '<tr class="' + (excluded ? 'opacity-40' : '') + (refMapping ? ' bg-amber-50' : '') + '" data-igid="' + gid + '">';
       html += '<td class="px-4 py-2" onclick="event.stopPropagation()">';
       html += '<input type="checkbox" ' + (excluded ? '' : 'checked') + ' onchange="toggleIncomeGroup(&#39;' + gid + '&#39;,this.checked)">';
       html += '</td>';
@@ -757,10 +975,18 @@ function renderIncomeDrawers() {
       html += '<div class="flex items-center gap-1.5">';
       html += '<span class="item-expand-btn">' + (expanded ? '&#9650;' : '&#9660;') + '</span>';
       html += '<span class="truncate max-w-xs hover:text-green-700" title="' + esc(g.name) + '">' + esc(g.name) + '</span>';
+      if (refMapping) html += '<span class="chip chip-amber shrink-0" style="font-size:.6rem">זיכוי</span>';
       if (frac !== null) html += trendHtmlInc(frac);
       html += '</div></td>';
       html += '<td class="px-4 py-2 text-slate-400 text-xs hide-mobile">' + g.monthsPresent + '/' + N_MONTHS + '</td>';
-      html += '<td class="px-4 py-2 text-left font-bold text-green-700">' + fmt(effective) + '</td>';
+      html += '<td class="px-4 py-2 text-left font-bold ' + (refMapping ? 'text-amber-600 line-through' : 'text-green-700') + '">' + fmt(effective) + '</td>';
+      // Refund toggle: dropdown to pick target drawer or clear
+      html += '<td class="px-4 py-2 text-center hide-mobile" onclick="event.stopPropagation()">';
+      html += '<select class="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white" style="max-width:110px" onchange="markAsRefund(&#39;' + gid + '&#39;,this.value)">';
+      html += '<option value="">לא זיכוי</option>';
+      VAR_DRAWERS.forEach(function(vd) { html += '<option value="' + vd.id + '"' + (refMapping && refMapping.targetDrawer === vd.id ? ' selected' : '') + '>' + vd.icon + ' ' + vd.label + '</option>'; });
+      html += '</select>';
+      html += '</td>';
       html += '</tr>';
 
       // Month detail rows
@@ -910,20 +1136,88 @@ function computeFixedItemEffective(g) {
   }
   return g.monthlyEquiv;
 }
+// ── TXN LOOKUP MAP (built at init, used for reclassification) ─────────────
+var TXN_LOOKUP = {}; // { [txnId]: { drawer, month, bizName, amt } }
+function buildTxnLookup() {
+  TXN_LOOKUP = {};
+  if (!VAR_TXN_DATA) return;
+  Object.keys(VAR_TXN_DATA).forEach(function(did) {
+    Object.keys(VAR_TXN_DATA[did]).forEach(function(m) {
+      (VAR_TXN_DATA[did][m] || []).forEach(function(grp) {
+        (grp.txns || []).forEach(function(txn) {
+          if (txn.id) TXN_LOOKUP[txn.id] = { drawer: did, month: m, bizName: grp.name, amt: txn.amt };
+        });
+      });
+    });
+  });
+}
+
+// Compute net reclassification delta per month for a given drawer
+function getTxnReclassAdjustment(drawerId) {
+  var delta = {}; // { [month]: netDelta }
+  var rc = state.txnReclassifications || {};
+  Object.keys(rc).forEach(function(txnId) {
+    var info = TXN_LOOKUP[txnId];
+    if (!info) return;
+    var target = rc[txnId].drawer;
+    if (info.drawer === drawerId && target !== drawerId) {
+      // This txn was moved OUT of this drawer
+      delta[info.month] = (delta[info.month] || 0) - info.amt;
+    }
+    if (target === drawerId && info.drawer !== drawerId) {
+      // This txn was moved INTO this drawer
+      delta[info.month] = (delta[info.month] || 0) + info.amt;
+    }
+  });
+  return delta;
+}
+
 function computeVarDrawerEffective(drawerId) {
   var byMonth   = (VAR_MONTH_DATA && VAR_MONTH_DATA[drawerId]) || {};
   var monthExcl = (state.varMonthExclusions || {})[drawerId] || {};
   var monthOvrd = (state.varMonthOverrides  || {})[drawerId] || {};
+  var rcDelta   = getTxnReclassAdjustment(drawerId);
   var total = 0, count = 0;
   FULL_MONTHS.forEach(function(m) {
-    if (byMonth[m] === undefined) return;
+    // A month counts if original drawer has data OR reclassified txns bring it in
+    var base = byMonth[m];
+    var delta = rcDelta[m] || 0;
+    if (base === undefined && delta === 0) return;
     if (state.globalMonthExclusions.indexOf(m) >= 0) return;
     if (monthExcl[m] === true) return;
-    var amt = (monthOvrd[m] !== undefined) ? monthOvrd[m] : byMonth[m];
-    total += amt;
+    var amt;
+    if (monthOvrd[m] !== undefined) {
+      amt = monthOvrd[m];
+    } else {
+      amt = (base || 0) + delta;
+    }
+    total += Math.max(0, amt);
     count++;
   });
-  return count ? Math.round(total / count) : (VAR_AVGS[drawerId] || 0);
+  var raw = count ? Math.round(total / count) : (VAR_AVGS[drawerId] || 0);
+  // Subtract refund credits targeting this drawer
+  var credit = getRefundCreditForDrawer(drawerId);
+  return Math.max(0, raw - credit);
+}
+
+// Reclassify a transaction to a new drawer
+function reclassifyTxn(txnId, newDrawer) {
+  if (!state.txnReclassifications) state.txnReclassifications = {};
+  var info = TXN_LOOKUP[txnId];
+  if (!info) return;
+  if (newDrawer === info.drawer) {
+    // Revert to original
+    delete state.txnReclassifications[txnId];
+  } else {
+    state.txnReclassifications[txnId] = { drawer: newDrawer, origDrawer: info.drawer };
+  }
+  saveState(); renderVariableDrawers(); refreshDashboard();
+}
+
+// Get the current effective drawer for a txn (considering reclassification)
+function getTxnEffectiveDrawer(txnId, origDrawer) {
+  var rc = (state.txnReclassifications || {})[txnId];
+  return rc ? rc.drawer : origDrawer;
 }
 function toggleVarExpand(drawerId) {
   if (!state.expandedVarDrawers) state.expandedVarDrawers = {};
@@ -984,18 +1278,20 @@ function computeFixedBreakdown() {
   return { monthly: monthly, periodic: periodic };
 }
 function updateFixedSummary() {
-  var bd    = computeFixedBreakdown();
-  var raw   = bd.monthly + bd.periodic;
-  var total = state.fixedOverride != null ? state.fixedOverride : raw;
-  document.getElementById('fixed-total-display').textContent   = fmt(total);
-  document.getElementById('fixed-monthly-display').textContent  = fmt(bd.monthly);
-  document.getElementById('fixed-periodic-display').textContent = fmt(bd.periodic);
+  var byType = computeFixedByType();
+  var rawTotal = byType.A + byType.B + byType.C;
+  var total = state.fixedOverride != null ? state.fixedOverride : rawTotal;
+  document.getElementById('fixed-total-display').textContent = fmt(total);
+  document.getElementById('fixed-typeA-display').textContent = fmt(byType.A);
+  document.getElementById('fixed-typeB-display').textContent = fmt(byType.B);
+  document.getElementById('fixed-typeC-display').textContent = fmt(byType.C);
   if (state.fixedOverride != null) document.getElementById('fixed-override').value = state.fixedOverride;
 }
 function getFixedValue() {
   if (state.fixedOverride != null) return state.fixedOverride;
   var bd = computeFixedBreakdown();
-  return bd.monthly + bd.periodic;
+  var keren3 = Math.round(getIncomeValue() * 0.03);
+  return bd.monthly + bd.periodic + keren3;
 }
 function getFixedBreakdown() {
   var bd = computeFixedBreakdown();
@@ -1018,33 +1314,58 @@ function clearFixedOverride() {
 }
 
 // ── FIXED: RENDER DRAWERS WITH PER-MONTH EXPANSION ────────────────────────
+var TYPE_BADGE_CLS = { A:'bg-blue-100 text-blue-700', B:'bg-amber-100 text-amber-700', C:'bg-indigo-100 text-indigo-700' };
+
+function computeFixedByType() {
+  var byType = { A: 0, B: 0, C: 0 };
+  var allFixed = RECURRING_DATA.concat(state.manualFixed || []);
+  FIXED_DRAWERS.forEach(function(d) {
+    var total = allFixed
+      .filter(function(g) { return (g.drawer || 'shonot') === d.id; })
+      .reduce(function(s, g) { return s + computeFixedItemEffective(g); }, 0);
+    byType[d.drawerType || 'A'] += total;
+  });
+  // Add 3% security fund to type C
+  byType.C += Math.round(getIncomeValue() * 0.03);
+  return byType;
+}
+
 function renderFixedDrawers() {
   var allFixed = RECURRING_DATA.concat(state.manualFixed || []);
   var byDrawer = {};
   FIXED_DRAWERS.forEach(function(d) { byDrawer[d.id] = []; });
   allFixed.forEach(function(g) {
-    var did = g.drawer || 'other_fixed';
-    if (!byDrawer[did]) did = 'other_fixed';
+    var did = g.drawer || 'shonot';
+    if (!byDrawer[did]) did = 'shonot';
     byDrawer[did].push(g);
   });
 
   var html = '<div class="space-y-3">';
   FIXED_DRAWERS.forEach(function(d) {
     var items = byDrawer[d.id] || [];
-    if (items.length === 0 && d.id !== 'other_fixed') return;
     var drawerTotal = items.reduce(function(s, g) { return s + computeFixedItemEffective(g); }, 0);
+    // For pkdonot add the 3% fund to the displayed total
+    var keren3 = (d.id === 'pkdonot') ? Math.round(getIncomeValue() * 0.03) : 0;
+    var displayTotal = drawerTotal + keren3;
+    if (items.length === 0 && keren3 === 0 && d.id !== 'shonot') return;
     var isOpen = state.drawerOpen[d.id] !== false;
+
+    var typeBadge = '';
+    if (d.drawerType && TYPE_BADGE_CLS[d.drawerType]) {
+      typeBadge = '<span class="text-xs font-bold px-1.5 py-0.5 rounded ' + TYPE_BADGE_CLS[d.drawerType] + '">' + d.drawerType + '</span>';
+    }
 
     html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-' + d.color + '">';
     // Drawer header
     html += '<div id="dh-' + d.id + '" class="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 ' + (isOpen ? 'open' : '') + '" onclick="toggleDrawer(&#39;' + d.id + '&#39;)">';
     html += '<div class="flex items-center gap-3">';
+    html += typeBadge;
     html += '<span class="text-xl">' + d.icon + '</span>';
     html += '<span class="font-semibold text-slate-700">' + d.label + '</span>';
     html += '<span class="chip chip-' + d.color + ' text-xs">' + items.length + ' פריטים</span>';
     html += '</div>';
     html += '<div class="flex items-center gap-3">';
-    html += '<span class="font-bold text-slate-700">' + fmt(drawerTotal) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
+    html += '<span class="font-bold text-slate-700">' + fmt(displayTotal) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
     html += '<span class="chevron text-slate-400 text-sm">&#9660;</span>';
     html += '</div></div>';
 
@@ -1104,10 +1425,31 @@ function renderFixedDrawers() {
             html += '<td class="px-4 font-medium text-blue-700">' + fmt(actual) + '</td>';
             html += '<td class="px-4" colspan="2"><input type="number" class="ov-input' + (mOv !== undefined ? ' override-active' : '') + '" value="' + (mOv !== undefined ? Math.round(mOv) : '') + '" placeholder="' + Math.round(actual) + '" onchange="onFixedMonthOv(&#39;' + gid + '&#39;,&#39;' + m + '&#39;,this.value)"></td>';
             html += '</tr>';
+            // Transaction sub-rows: date + payment chip + amount
+            var fixTxns = (FIXED_TXN_DATA[g.id] || {})[m] || [];
+            fixTxns.forEach(function(txn) {
+              var dt = txn.date ? txn.date.slice(8,10) + '/' + txn.date.slice(5,7) : '';
+              html += '<tr class="month-row-fixed' + (expanded ? '' : ' hidden') + ' item-month-row-' + gid + '">';
+              html += '<td></td>';
+              html += '<td colspan="4" class="px-4 pb-1">';
+              html += '<div class="flex items-center gap-2 text-xs text-slate-400 pr-4">';
+              html += '<span class="text-slate-300 shrink-0">' + dt + '</span>';
+              if (txn.src) html += srcChip(txn.src);
+              html += '<span>' + fmt(txn.amt) + '</span>';
+              html += '</div></td>';
+              html += '</tr>';
+            });
           });
         }
       });
       html += '</tbody></table>';
+    }
+    // Special: קרן ביטחון 3% row for pkdonot drawer
+    if (d.id === 'pkdonot' && keren3 > 0) {
+      html += '<div class="px-5 py-3 flex items-center justify-between border-t border-indigo-100 bg-indigo-50">';
+      html += '<div class="flex items-center gap-2 text-indigo-700 text-sm font-medium">🔒 קרן ביטחון <span class="text-xs font-normal text-indigo-500">(3% מהכנסה)</span></div>';
+      html += '<span class="font-bold text-indigo-700">' + fmt(keren3) + '<span class="text-xs font-normal text-indigo-400">/חודש</span></span>';
+      html += '</div>';
     }
     html += '</div></div>';
   });
@@ -1159,15 +1501,40 @@ function onFixedMonthOv(gid, month, val) {
   saveState(); updateFixedSummary(); refreshDashboard();
 }
 
+// ── SOURCE CHIP HELPER ────────────────────────────────────────────────────
+var SRC_CHIP = {
+  YahavBank:       ['chip-green',  'יהב'],
+  leumicard:       ['chip-blue',   'לאומי'],
+  isracard:        ['chip-indigo', 'ישראכרט'],
+  americanexpress: ['chip-amber',  'אמקס']
+};
+function srcChip(src) {
+  var c = SRC_CHIP[src];
+  if (!c) return '';
+  return '<span class="chip ' + c[0] + ' shrink-0" style="font-size:.6rem;padding:1px 5px">' + c[1] + '</span>';
+}
+// Build dropdown options for all var drawers (used in "move to" select)
+function varDrawerOptions(currentDrawer, exceptDrawer) {
+  var opts = '<option value="">— העבר ל... —</option>';
+  VAR_DRAWERS.forEach(function(d) {
+    if (d.id === exceptDrawer) return;
+    opts += '<option value="' + d.id + '"' + (d.id === currentDrawer ? ' selected' : '') + '>' + d.icon + ' ' + d.label + '</option>';
+  });
+  return opts;
+}
+
 // ── VARIABLE DRAWERS ───────────────────────────────────────────────────────
 function renderVariableDrawers() {
   var html = '<div class="space-y-3">';
   VAR_DRAWERS.forEach(function(d) {
     var avg          = VAR_AVGS[d.id]  || 0;
+    var max5         = (VAR_MAX5 && VAR_MAX5[d.id]) || 0;
     var trend        = VAR_TREND[d.id] || 0;
+    var budgetMode   = (state.varBudgetMode || {})[d.id] || 'avg';
     var effectiveAmt = computeVarDrawerEffective(d.id);
     var budget       = state.varBudgets[d.id] || null;
-    var displayAmt   = budget != null ? budget : effectiveAmt;
+    // Effective budget reference: manual > max5 mode > avg
+    var budgetRef    = budget != null ? budget : (budgetMode === 'max5' ? max5 : effectiveAmt);
     var isOpen       = state.drawerOpen['v_' + d.id] !== false;
     var trendPct     = avg > 0 ? Math.round(((trend - avg) / avg) * 100) : 0;
     var trendLabel   = trendPct > 5 ? '\u2191 מגמת עלייה' : trendPct < -5 ? '\u2193 מגמת ירידה' : 'יציב';
@@ -1183,38 +1550,49 @@ function renderVariableDrawers() {
     html += '</div>';
     html += '<div class="flex items-center gap-3">';
     html += '<span class="text-xs ' + trendColor + ' hide-mobile">' + trendLabel + '</span>';
-    html += '<span class="font-bold text-slate-700">' + fmt(displayAmt) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
+    html += '<span class="font-bold text-slate-700">' + fmt(budgetRef) + '<span class="text-xs font-normal text-slate-400">/חודש</span></span>';
     html += '<span class="chevron text-slate-400 text-sm">&#9660;</span>';
     html += '</div></div>';
 
     html += '<div id="db-v_' + d.id + '" class="drawer-body ' + (isOpen ? 'open' : 'closed') + '">';
     html += '<div class="px-5 py-4 space-y-4">';
-    html += '<div class="flex flex-wrap gap-4 items-center">';
-    html += '<div><div class="text-xs text-slate-400 mb-1">ממוצע היסטורי (9 חודשים)</div><div class="text-lg font-bold text-slate-600">' + fmt(avg) + '</div></div>';
-    html += '<div><div class="text-xs text-slate-400 mb-1">ממוצע 3 חודשים אחרונים</div><div class="text-lg font-semibold ' + trendColor + '">' + fmt(trend) + '</div></div>';
+
+    // ── Stats row + budget input ──
+    html += '<div class="flex flex-wrap gap-4 items-end">';
+    html += '<div><div class="text-xs text-slate-400 mb-1">ממוצע 9 חודשים</div><div class="text-lg font-bold text-slate-600">' + fmt(avg) + '</div></div>';
+    html += '<div><div class="text-xs text-slate-400 mb-1">ממוצע 3 חודשים</div><div class="text-lg font-semibold ' + trendColor + '">' + fmt(trend) + '</div></div>';
+    html += '<div><div class="text-xs text-slate-400 mb-1">מקסימום 5 חודשים</div><div class="text-lg font-semibold text-violet-600">' + fmt(max5) + '</div></div>';
     html += '<div class="flex-1 max-w-48"><div class="text-xs text-slate-400 mb-1">תקציב חודשי יעד</div>';
-    html += '<input type="number" class="inline-edit ' + (budget != null ? 'override-active' : '') + ' w-24" value="' + (budget != null ? budget : '') + '" placeholder="' + Math.round(effectiveAmt) + '" onchange="setVarBudget(&#39;' + d.id + '&#39;,this.value)">';
+    html += '<input type="number" class="inline-edit ' + (budget != null ? 'override-active' : '') + ' w-24" value="' + (budget != null ? budget : '') + '" placeholder="' + Math.round(budgetMode === 'max5' ? max5 : effectiveAmt) + '" onchange="setVarBudget(&#39;' + d.id + '&#39;,this.value)">';
     html += '</div></div>';
-    if (budget != null && budget > 0) {
-      var fillPct = Math.min(100, Math.round((effectiveAmt / budget) * 100));
+
+    // ── Budget mode selector ──
+    html += '<div class="flex gap-4 text-xs text-slate-500">';
+    html += '<label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="bmode_' + d.id + '" value="avg" ' + (budgetMode === 'avg' ? 'checked' : '') + ' onchange="setVarBudgetMode(&#39;' + d.id + '&#39;,&#39;avg&#39;)"> השתמש בממוצע</label>';
+    html += '<label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="bmode_' + d.id + '" value="max5" ' + (budgetMode === 'max5' ? 'checked' : '') + ' onchange="setVarBudgetMode(&#39;' + d.id + '&#39;,&#39;max5&#39;)"> מקסימום 5 חודשים <span class="chip chip-violet" style="font-size:.6rem">B</span></label>';
+    html += '</div>';
+
+    // ── Progress bar ──
+    var refAmt = budget != null ? budget : (budgetMode === 'max5' ? max5 : 0);
+    if (refAmt > 0) {
+      var fillPct = Math.min(100, Math.round((effectiveAmt / refAmt) * 100));
       var fillClass = fillPct < 80 ? 'prog-ok' : fillPct < 100 ? 'prog-warn' : 'prog-over';
       html += '<div>';
-      html += '<div class="flex justify-between text-xs text-slate-400 mb-1"><span>ממוצע: ' + fmt(effectiveAmt) + '</span><span>יעד: ' + fmt(budget) + '</span></div>';
+      html += '<div class="flex justify-between text-xs text-slate-400 mb-1"><span>ממוצע בפועל: ' + fmt(effectiveAmt) + '</span><span>יעד: ' + fmt(refAmt) + '</span></div>';
       html += '<div class="progress-track"><div class="progress-fill ' + fillClass + '" style="width:' + fillPct + '%"></div></div>';
-      html += '<div class="text-xs mt-1 ' + (fillPct >= 100 ? 'text-red-500' : fillPct >= 80 ? 'text-amber-500' : 'text-green-600') + '">' + fillPct + '% מהתקציב</div>';
+      html += '<div class="text-xs mt-1 ' + (fillPct >= 100 ? 'text-red-500' : fillPct >= 80 ? 'text-amber-500' : 'text-green-600') + '">' + fillPct + '% מהיעד</div>';
       html += '</div>';
     } else {
       html += '<div class="text-xs text-slate-300 italic">הגדר תקציב יעד לראות את מד ההתקדמות</div>';
     }
 
-    // פירוט חודשי
+    // ── Monthly drill-down ──
     var byMonth   = (VAR_MONTH_DATA && VAR_MONTH_DATA[d.id]) || {};
     var byTxn     = (VAR_TXN_DATA   && VAR_TXN_DATA[d.id])   || {};
     var months    = FULL_MONTHS.filter(function(m) { return byMonth[m] !== undefined; });
     var mExclMap  = (state.varMonthExclusions || {})[d.id] || {};
     var mOvrdMap  = (state.varMonthOverrides  || {})[d.id] || {};
     var mExpandMap = state.expandedVarMonths || {};
-    // חישוב סטיית תקן לסימון חריגים
     var mVals = months.map(function(mx) { return byMonth[mx]; });
     var mMean = mVals.reduce(function(s,v){ return s+v; }, 0) / (mVals.length || 1);
     var mSd   = Math.sqrt(mVals.reduce(function(s,v){ return s+(v-mMean)*(v-mMean); }, 0) / (mVals.length || 1));
@@ -1240,7 +1618,6 @@ function renderVariableDrawers() {
         var rowVis    = vExpanded ? '' : ' hidden';
         var isOutlier = mSd > 0 && Math.abs(actual - mMean) > 1.5 * mSd;
 
-        // שורת חודש
         html += '<tr class="var-month-row-' + d.id + rowVis + (mEx ? ' opacity-40' : '') + (isOutlier ? ' bg-amber-50' : '') + '">';
         html += '<td class="px-3 py-1"><input type="checkbox" ' + (mEx ? '' : 'checked') + (gEx ? ' disabled' : '') + ' onchange="toggleVarMonth(&#39;' + d.id + '&#39;,&#39;' + m + '&#39;,this.checked)"></td>';
         html += '<td class="px-3 py-1 text-slate-600">';
@@ -1253,17 +1630,16 @@ function renderVariableDrawers() {
         html += '<td class="px-3 py-1 hide-mobile"><input type="number" class="ov-input' + (mOv !== undefined ? ' override-active' : '') + '" value="' + (mOv !== undefined ? Math.round(mOv) : '') + '" placeholder="' + Math.round(actual) + '" onchange="onVarMonthOv(&#39;' + d.id + '&#39;,&#39;' + m + '&#39;,this.value)"></td>';
         html += '</tr>';
 
-        // שורות עסקאות (מוסתרות עד להרחבה)
+        // Level 3: business groups per month
         if (txns.length > 0) {
           html += '<tr class="var-txn-row-' + mKey + rowVis + (mExp ? '' : ' hidden') + '">';
           html += '<td></td><td colspan="3" class="px-4 pb-2">';
           html += '<div class="border-r-2 border-blue-100 pr-2 space-y-0">';
           txns.forEach(function(grp) {
-            var bizKey     = d.id + '|' + m + '|' + grp.name;
+            var bizKey      = d.id + '|' + m + '|' + grp.name;
             var bizExpanded = !!(state.expandedVarBiz || {})[bizKey];
-            var hasSubs    = grp.count > 1;
-            var monthCount = (VAR_BIZ_COUNT[d.id] || {})[grp.name] || 0;
-            // שורת עסק
+            var hasSubs     = grp.count > 1;
+            var monthCount  = (VAR_BIZ_COUNT[d.id] || {})[grp.name] || 0;
             html += '<div class="flex justify-between text-xs text-slate-600 py-1 border-b border-slate-50 items-center">';
             html += '<span class="flex gap-1.5 min-w-0 items-center">';
             if (hasSubs) {
@@ -1277,16 +1653,24 @@ function renderVariableDrawers() {
             html += '</span>';
             html += '<span class="font-semibold text-slate-800 shrink-0">' + fmt(grp.total) + '</span>';
             html += '</div>';
-            // שורות עסקאות בודדות (מוסתרות)
-            if (hasSubs) {
-              grp.txns.forEach(function(txn) {
-                var dt = txn.date ? txn.date.slice(8,10) + '/' + txn.date.slice(5,7) : '';
-                html += '<div data-vbiz="' + esc(bizKey) + '" class="flex justify-between text-xs text-slate-400 pr-6 py-0.5' + (bizExpanded ? '' : ' hidden') + '">';
-                html += '<span class="text-slate-300">' + dt + '</span>';
-                html += '<span>' + fmt(txn.amt) + '</span>';
-                html += '</div>';
-              });
-            }
+            // Level 4: individual transactions
+            grp.txns.forEach(function(txn) {
+              var dt = txn.date ? txn.date.slice(8,10) + '/' + txn.date.slice(5,7) : '';
+              var effDrawer = getTxnEffectiveDrawer(txn.id, d.id);
+              var isReclassed = effDrawer !== d.id;
+              html += '<div data-vbiz="' + esc(bizKey) + '" class="flex justify-between items-center text-xs text-slate-400 pr-6 py-1 gap-2' + ((hasSubs && !bizExpanded) ? ' hidden' : '') + (isReclassed ? ' opacity-40 line-through' : '') + '">';
+              html += '<span class="flex items-center gap-1.5 min-w-0">';
+              html += '<span class="text-slate-300 shrink-0">' + dt + '</span>';
+              if (txn.src) html += srcChip(txn.src);
+              html += '</span>';
+              // Move dropdown
+              if (txn.id) {
+                var selOpts = varDrawerOptions(effDrawer, d.id);
+                html += '<select class="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white hide-mobile" style="max-width:120px" onchange="reclassifyTxn(&#39;' + esc(txn.id) + '&#39;,this.value);this.value=&#39;&#39;">' + selOpts + '</select>';
+              }
+              html += '<span class="shrink-0">' + fmt(txn.amt) + '</span>';
+              html += '</div>';
+            });
           });
           html += '</div></td></tr>';
         }
@@ -1303,6 +1687,11 @@ function renderVariableDrawers() {
 function setVarBudget(id, val) {
   var n = parseFloat(val);
   if (isNaN(n) || n <= 0) delete state.varBudgets[id]; else state.varBudgets[id] = n;
+  saveState(); renderVariableDrawers(); refreshDashboard();
+}
+function setVarBudgetMode(id, mode) {
+  if (!state.varBudgetMode) state.varBudgetMode = {};
+  state.varBudgetMode[id] = mode;
   saveState(); renderVariableDrawers(); refreshDashboard();
 }
 function updateVarSummary() {
@@ -1340,7 +1729,7 @@ function updateAccum(id, val) {
   state.accumGoals[id].annual = n;
   var el = document.getElementById('accum-monthly-' + id);
   if (el) el.textContent = fmt(Math.round(n / 12));
-  saveState(); renderGoalsTab(); refreshDashboard();
+  saveState(); renderGoalsTab(); renderDrawerCTab(); refreshDashboard();
 }
 function getAccumTotal() {
   return ACCUM_DRAWERS_DEF.reduce(function(s, d) { return s + Math.round((state.accumGoals[d.id] && state.accumGoals[d.id].annual || 0) / 12); }, 0);
@@ -1386,9 +1775,306 @@ function getGoalsValue() {
   return manual + getAccumTotal();
 }
 
+// ── DRAWER C ───────────────────────────────────────────────────────────────
+function getDrawerCTotal() {
+  var total = 0;
+  // עתידיות: accumGoals (existing)
+  total += getAccumTotal();
+  // בלט"מים + הגשמה: drawerCGoals
+  (state.drawerCGoals || []).forEach(function(g) {
+    if (g.subCategory === 'biltam') {
+      var needed = Math.max(0, (g.targetBalance || 0) - (g.currentBalance || 0));
+      total += Math.round(needed / 12);
+    } else {
+      total += Math.round((g.annualTarget || 0) / 12);
+    }
+  });
+  return total;
+}
+
+function renderDrawerCTab() {
+  var el = document.getElementById('drawerc-content');
+  if (!el) return;
+  var html = '';
+
+  // ── Section A: עתידיות ──────────────────────────────────────────────────
+  html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-violet mb-4">';
+  html += '<div class="px-5 py-4 border-b border-slate-100"><h2 class="font-semibold text-slate-700">📅 עתידיות — הוצאות ידועות מראש</h2>';
+  html += '<p class="text-xs text-slate-400 mt-0.5">חגים, טסט, ביטוחים שנתיים — מה שיגיע בסוף השנה</p></div>';
+  html += '<div class="p-4 space-y-3">';
+  ACCUM_DRAWERS_DEF.forEach(function(d) {
+    var ag      = state.accumGoals[d.id] || { annual: 0 };
+    var monthly = Math.round((ag.annual || 0) / 12);
+    html += '<div class="flex flex-wrap gap-4 items-center bg-slate-50 rounded-lg px-4 py-3 drawer-' + d.color + '">';
+    html += '<span class="text-xl">' + d.icon + '</span>';
+    html += '<div class="flex-1 min-w-0"><div class="font-medium text-slate-700 text-sm">' + d.label + '</div><div class="text-xs text-slate-400">' + d.hint + '</div></div>';
+    html += '<div class="flex gap-4 items-center">';
+    html += '<div><div class="text-xs text-slate-400 mb-1">שנתי ₪</div><input type="number" class="inline-edit w-24" value="' + (ag.annual || '') + '" placeholder="0" oninput="updateAccum(&#39;' + d.id + '&#39;,this.value)"></div>';
+    html += '<div class="text-center"><div class="text-xs text-slate-400 mb-1">÷12 = חודשי</div><div class="font-bold text-violet-700" id="drawerc-accum-' + d.id + '">' + fmt(monthly) + '</div></div>';
+    html += '</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Section B: בלט"מים ─────────────────────────────────────────────────
+  var biltam = (state.drawerCGoals || []).filter(function(g) { return g.subCategory === 'biltam'; });
+  html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-red mb-4">';
+  html += '<div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">';
+  html += '<div><h2 class="font-semibold text-slate-700">🛡️ בלט"מים — קרן ביטחון</h2>';
+  html += '<p class="text-xs text-slate-400 mt-0.5">הפקדות לקרן חירום: כמה צריך לחסוך כל חודש להגיע ליעד</p></div>';
+  html += '<button onclick="addDrawerCGoal(\'biltam\')" class="bg-red-500 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-red-600 transition">+ הוסף</button>';
+  html += '</div>';
+  html += '<div class="p-4 space-y-3">';
+  if (biltam.length === 0) {
+    html += '<div class="text-slate-300 text-sm text-center py-4">הוסף קרן ביטחון</div>';
+  } else {
+    biltam.forEach(function(g) {
+      var needed  = Math.max(0, (g.targetBalance || 0) - (g.currentBalance || 0));
+      var monthly = Math.round(needed / 12);
+      var pct     = g.targetBalance > 0 ? Math.min(100, Math.round(((g.currentBalance || 0) / g.targetBalance) * 100)) : 0;
+      html += '<div class="bg-slate-50 rounded-lg px-4 py-3">';
+      html += '<div class="flex gap-3 items-center mb-2">';
+      html += '<input type="text" value="' + esc(g.name) + '" placeholder="שם הקרן..." class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400" onchange="updateDrawerCGoal(&#39;' + g.id + '&#39;,&#39;name&#39;,this.value)">';
+      html += '<button onclick="deleteDrawerCGoal(&#39;' + g.id + '&#39;)" class="text-slate-300 hover:text-red-500 text-xl leading-none">&times;</button>';
+      html += '</div>';
+      html += '<div class="flex flex-wrap gap-3">';
+      html += '<div><div class="text-xs text-slate-400 mb-1">יעד ₪</div><input type="number" value="' + (g.targetBalance || '') + '" placeholder="0" class="ov-input w-24" oninput="updateDrawerCGoal(&#39;' + g.id + '&#39;,&#39;targetBalance&#39;,this.value)"></div>';
+      html += '<div><div class="text-xs text-slate-400 mb-1">קיים ₪</div><input type="number" value="' + (g.currentBalance || '') + '" placeholder="0" class="ov-input w-24" oninput="updateDrawerCGoal(&#39;' + g.id + '&#39;,&#39;currentBalance&#39;,this.value)"></div>';
+      html += '<div class="text-center"><div class="text-xs text-slate-400 mb-1">חודשי</div><div class="font-bold text-red-600">' + fmt(monthly) + '</div></div>';
+      html += '</div>';
+      if (g.targetBalance > 0) {
+        var fc = pct >= 100 ? 'prog-ok' : pct >= 50 ? 'prog-warn' : 'prog-over';
+        html += '<div class="mt-2"><div class="progress-track"><div class="progress-fill ' + fc + '" style="width:' + pct + '%"></div></div>';
+        html += '<div class="text-xs mt-1 text-slate-400">' + pct + '% מהיעד</div></div>';
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div></div>';
+
+  // ── Section C: הגשמה ────────────────────────────────────────────────────
+  var hagshama = (state.drawerCGoals || []).filter(function(g) { return g.subCategory === 'hagshama'; });
+  html += '<div class="bg-white rounded-xl shadow-sm overflow-hidden drawer-sky mb-4">';
+  html += '<div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">';
+  html += '<div><h2 class="font-semibold text-slate-700">✨ הגשמה — חלומות ויעדים</h2>';
+  html += '<p class="text-xs text-slate-400 mt-0.5">חופשות, ריהוט, שיפוצים — מה שרוצים לצבור</p></div>';
+  html += '<button onclick="addDrawerCGoal(\'hagshama\')" class="bg-sky-500 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-sky-600 transition">+ הוסף</button>';
+  html += '</div>';
+  html += '<table class="w-full text-sm"><thead><tr class="bg-slate-50 text-slate-400 text-xs">';
+  html += '<th class="px-4 py-2 text-right">שם היעד</th><th class="px-4 py-2 text-center">שנתי ₪</th><th class="px-4 py-2 text-left">חודשי (÷12)</th><th class="px-4 py-2 w-8"></th>';
+  html += '</tr></thead><tbody>';
+  if (hagshama.length === 0) {
+    html += '<tr><td colspan="4" class="text-center text-slate-300 py-6 text-sm">הוסף יעד הגשמה</td></tr>';
+  } else {
+    hagshama.forEach(function(g) {
+      var monthly = Math.round((g.annualTarget || 0) / 12);
+      html += '<tr>';
+      html += '<td class="px-4 py-2"><input type="text" value="' + esc(g.name) + '" placeholder="שם היעד..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:border-blue-400" onchange="updateDrawerCGoal(&#39;' + g.id + '&#39;,&#39;name&#39;,this.value)"></td>';
+      html += '<td class="px-4 py-2 text-center"><input type="number" value="' + (g.annualTarget || '') + '" placeholder="0" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-28 text-center focus:outline-none focus:border-blue-400" oninput="updateDrawerCGoal(&#39;' + g.id + '&#39;,&#39;annualTarget&#39;,this.value)"></td>';
+      html += '<td class="px-4 py-2 font-bold text-sky-700">' + fmt(monthly) + '</td>';
+      html += '<td class="px-4 py-2"><button onclick="deleteDrawerCGoal(&#39;' + g.id + '&#39;)" class="text-slate-300 hover:text-red-500 text-xl leading-none">&times;</button></td>';
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table></div>';
+
+  el.innerHTML = html;
+  var totEl = document.getElementById('drawerc-total-display');
+  if (totEl) totEl.textContent = fmt(getDrawerCTotal());
+}
+
+function addDrawerCGoal(subCat) {
+  if (!state.drawerCGoals) state.drawerCGoals = [];
+  state.drawerCGoals.push({ id: 'dc' + Date.now(), name: '', subCategory: subCat, annualTarget: 0, monthlyAllocation: 0, targetBalance: 0, currentBalance: 0 });
+  saveState(); renderDrawerCTab(); refreshDashboard();
+}
+function updateDrawerCGoal(id, field, val) {
+  var g = (state.drawerCGoals || []).filter(function(x) { return x.id === id; })[0];
+  if (!g) return;
+  if (field === 'name') g.name = val;
+  else g[field] = parseFloat(val) || 0;
+  saveState(); renderDrawerCTab(); refreshDashboard();
+}
+function deleteDrawerCGoal(id) {
+  state.drawerCGoals = (state.drawerCGoals || []).filter(function(x) { return x.id !== id; });
+  saveState(); renderDrawerCTab(); refreshDashboard();
+}
+
+// ── PREDICTIVE ENGINE ──────────────────────────────────────────────────────
+var VAR_DRAWER_IDS = ['supermarket','restaurants','piukkim','bigud','adventures','transport','kids','other_var'];
+
+function computeMonthlyProjection() {
+  var now           = new Date();
+  var todayYear     = now.getFullYear();
+  var todayMonth    = now.getMonth() + 1; // 1-based
+  var dayOfMonth    = now.getDate();
+  var currentMonthStr = todayYear + '-' + (todayMonth < 10 ? '0' : '') + todayMonth;
+
+  var daysInMonth   = new Date(todayYear, todayMonth, 0).getDate();
+  var remainingDays = daysInMonth - dayOfMonth;
+
+  // Check if current month has any data
+  var currentMonthHasData = VAR_DRAWER_IDS.some(function(id) {
+    return VAR_MONTH_DATA[id] && VAR_MONTH_DATA[id][currentMonthStr] !== undefined;
+  });
+
+  var dataMonth, isCurrentMonth, elapsedDays;
+  if (currentMonthHasData) {
+    dataMonth      = currentMonthStr;
+    isCurrentMonth = true;
+    elapsedDays    = dayOfMonth;
+  } else {
+    // Data lags — use latest available complete month
+    dataMonth      = FULL_MONTHS[FULL_MONTHS.length - 1];
+    isCurrentMonth = false;
+    elapsedDays    = dayOfMonth;
+  }
+
+  // Sum variable spending for the data month
+  var totalVarSpent = 0;
+  if (isCurrentMonth) {
+    // Filter individual transactions by date <= today
+    var todayStr = currentMonthStr + '-' + (dayOfMonth < 10 ? '0' : '') + dayOfMonth;
+    VAR_DRAWER_IDS.forEach(function(id) {
+      var txnsByMonth = (VAR_TXN_DATA[id] && VAR_TXN_DATA[id][currentMonthStr]) || [];
+      txnsByMonth.forEach(function(grp) {
+        (grp.txns || []).forEach(function(t) {
+          if (t.date && t.date <= todayStr) totalVarSpent += Math.abs(t.amt);
+        });
+      });
+    });
+  } else {
+    // Use full data month total, respecting exclusions
+    var dataMonthExcluded = state.globalMonthExclusions && state.globalMonthExclusions.indexOf(dataMonth) >= 0;
+    VAR_DRAWER_IDS.forEach(function(id) {
+      if (dataMonthExcluded) return;
+      var monthExcl = ((state.varMonthExclusions || {})[id] || {})[dataMonth];
+      if (monthExcl === true) return;
+      var monthOvrd = ((state.varMonthOverrides  || {})[id] || {})[dataMonth];
+      var raw = (VAR_MONTH_DATA[id] && VAR_MONTH_DATA[id][dataMonth]) || 0;
+      totalVarSpent += (monthOvrd !== undefined ? monthOvrd : raw);
+    });
+  }
+
+  // Average monthly variable spend using the app's own effective average per drawer
+  var avgMonthlyVarSpend = VAR_DRAWER_IDS.reduce(function(sum, id) {
+    return sum + computeVarDrawerEffective(id);
+  }, 0);
+
+  // Burn rate: spending per day based on data month
+  var burnRatePerDay;
+  if (isCurrentMonth) {
+    burnRatePerDay = elapsedDays > 0 ? totalVarSpent / elapsedDays : 0;
+  } else {
+    var parts = dataMonth.split('-');
+    var daysInDataMonth = new Date(parseInt(parts[0]), parseInt(parts[1]), 0).getDate();
+    burnRatePerDay = daysInDataMonth > 0 ? totalVarSpent / daysInDataMonth : 0;
+  }
+
+  // Project current month: estimate spent-so-far + remaining
+  var spentByToday   = burnRatePerDay * dayOfMonth;
+  var projectedTotal = spentByToday + (burnRatePerDay * remainingDays);
+
+  var free = getIncomeValue() - getFixedValue() - getGoalsValue();
+  var projectedEndBalance = free - projectedTotal;
+
+  // Expected pace: where spending "should" be based on average monthly rate
+  var expectedByToday = daysInMonth > 0 ? (avgMonthlyVarSpend / daysInMonth) * dayOfMonth : 0;
+
+  return {
+    free: free,
+    totalVarSpent: totalVarSpent,
+    spentByToday: spentByToday,
+    elapsedDays: elapsedDays,
+    remainingDays: remainingDays,
+    daysInMonth: daysInMonth,
+    dayOfMonth: dayOfMonth,
+    burnRatePerDay: burnRatePerDay,
+    projectedTotal: projectedTotal,
+    projectedEndBalance: projectedEndBalance,
+    expectedByToday: expectedByToday,
+    avgMonthlyVarSpend: avgMonthlyVarSpend,
+    isCurrentMonth: isCurrentMonth,
+    dataMonth: dataMonth
+  };
+}
+
+function updateProjectionUI() {
+  var section = document.getElementById('forecast-section');
+  if (!section) return;
+
+  var p = computeMonthlyProjection();
+  section.style.display = '';
+
+  // Card color
+  section.className = 'mt-3 rounded-xl p-4';
+  var endBal = p.projectedEndBalance;
+  if (endBal >= 0 && p.spentByToday <= p.free * 1.05) {
+    section.classList.add('forecast-positive');
+  } else if (endBal < 0 || p.spentByToday > p.free * 1.2) {
+    section.classList.add('forecast-negative');
+  } else {
+    section.classList.add('forecast-neutral');
+  }
+
+  // Headline
+  var headline = document.getElementById('forecast-headline');
+  if (endBal >= 0) {
+    headline.textContent = 'בקצב ההוצאות הנוכחי, בסוף החודש יישארו לכם במגירת הבזבוזים ' + fmt(endBal);
+    headline.style.color = '#065f46';
+  } else {
+    headline.textContent = 'בקצב ההוצאות הנוכחי, צפויה חריגה של ' + fmt(Math.abs(endBal)) + ' בסוף החודש';
+    headline.style.color = '#991b1b';
+  }
+
+  // Burn rate sub-line
+  document.getElementById('forecast-burn-rate').textContent =
+    'קצב שריפה: ' + fmt(p.burnRatePerDay) + ' ליום · יום ' + p.dayOfMonth + ' מתוך ' + p.daysInMonth;
+
+  // Status badge
+  var badge = document.getElementById('forecast-badge');
+  var pace  = p.expectedByToday > 0 ? p.spentByToday / p.expectedByToday : 1;
+  if (pace > 1.15) {
+    badge.textContent = 'מהיר מהתכנון';
+    badge.className   = 'chip chip-red shrink-0 text-xs';
+  } else if (pace < 0.85) {
+    badge.textContent = 'לאט מהתכנון';
+    badge.className   = 'chip chip-green shrink-0 text-xs';
+  } else {
+    badge.textContent = 'בקצב תקין';
+    badge.className   = 'chip chip-teal shrink-0 text-xs';
+  }
+
+  // Data note
+  var monthLabel = MONTH_LABELS[p.dataMonth] || p.dataMonth;
+  document.getElementById('forecast-data-note').textContent = p.isCurrentMonth
+    ? 'מבוסס על עסקאות החודש הנוכחי עד היום'
+    : 'מבוסס על נתוני ' + monthLabel + ' (הנתונים המעודכנים ביותר)';
+
+  // Pacing bar
+  var barPct = p.free > 0 ? Math.min(100, Math.round((p.spentByToday / p.free) * 100)) : 0;
+  var fillEl = document.getElementById('pacing-fill');
+  if (fillEl) {
+    fillEl.style.width = barPct + '%';
+    fillEl.className   = 'pacing-fill ' + (barPct < 75 ? 'prog-ok' : barPct < 95 ? 'prog-warn' : 'prog-over');
+  }
+
+  // Calendar marker (expected position)
+  var markerPct = p.free > 0 ? Math.min(100, Math.round((p.expectedByToday / p.free) * 100)) : 0;
+  var markerEl  = document.getElementById('pacing-marker');
+  if (markerEl) {
+    // In RTL the bar fills from right; use left-based positioning to mirror correctly
+    markerEl.style.left  = '';
+    markerEl.style.right = (100 - markerPct) + '%';
+  }
+
+  // Labels
+  document.getElementById('pacing-label-actual').textContent   = 'הוצאנו (משוער): ' + fmt(p.spentByToday);
+  document.getElementById('pacing-label-expected').textContent = 'צפוי להיום: ' + fmt(p.expectedByToday);
+}
+
 // ── DASHBOARD ──────────────────────────────────────────────────────────────
 function renderProgressBars() {
-  var progressDrawers = [{id:'supermarket',icon:'🛒'},{id:'fuel',icon:'⛽'},{id:'kids',icon:'👶'},{id:'entertainment',icon:'🎭'},{id:'shopping',icon:'🛍️'}];
+  var progressDrawers = [{id:'supermarket',icon:'🛒'},{id:'restaurants',icon:'🍽️'},{id:'piukkim',icon:'🍰'},{id:'transport',icon:'🚗'},{id:'kids',icon:'👶'}];
   var html = '';
   progressDrawers.forEach(function(d) {
     var def    = VAR_DRAWERS.filter(function(x) { return x.id === d.id; })[0];
@@ -1413,35 +2099,52 @@ function renderProgressBars() {
   document.getElementById('progress-bars').innerHTML = html;
 }
 function refreshDashboard() {
-  var income    = getIncomeValue();
-  var fixed     = getFixedValue();
-  var bd        = getFixedBreakdown();
-  var goals     = getGoalsValue();
+  var income     = getIncomeValue();
+  var fixed      = getFixedValue();
+  var bd         = getFixedBreakdown();
+  var drawerC    = getDrawerCTotal();
   var afterFixed = income - fixed;
-  var free      = afterFixed - goals;
+  var free       = afterFixed - drawerC;
 
-  document.getElementById('d-income').textContent = fmt(income);
-  document.getElementById('d-fixed').textContent  = fmt(fixed);
-  document.getElementById('d-goals').textContent  = fmt(goals);
-  document.getElementById('dash-income').textContent    = fmt(income);
-  document.getElementById('dash-fixed').textContent     = fmt(fixed);
-  document.getElementById('dash-fixed-m').textContent   = fmt(bd.monthly);
-  document.getElementById('dash-fixed-p').textContent   = fmt(bd.periodic);
+  // Drawer C sub-totals
+  var cAtidiot  = getAccumTotal();
+  var cBiltam   = (state.drawerCGoals || []).filter(function(g) { return g.subCategory === 'biltam'; })
+                  .reduce(function(s,g) { return s + Math.round(Math.max(0,(g.targetBalance||0)-(g.currentBalance||0))/12); }, 0);
+  var cHagshama = (state.drawerCGoals || []).filter(function(g) { return g.subCategory === 'hagshama'; })
+                  .reduce(function(s,g) { return s + Math.round((g.annualTarget||0)/12); }, 0);
+
+  // Variable total (avg, for display)
+  var varTotal  = 0;
+  VAR_DRAWERS.forEach(function(d) { varTotal += computeVarDrawerEffective(d.id); });
+
+  document.getElementById('d-income').textContent   = fmt(income);
+  document.getElementById('d-fixed').textContent    = fmt(fixed);
+  document.getElementById('d-drawerc').textContent  = fmt(drawerC);
+  document.getElementById('d-variable').textContent = fmt(varTotal);
+
+  document.getElementById('dash-income').textContent      = fmt(income);
+  document.getElementById('dash-fixed').textContent       = fmt(fixed);
+  document.getElementById('dash-fixed-m').textContent     = fmt(bd.monthly);
+  document.getElementById('dash-fixed-p').textContent     = fmt(bd.periodic);
   document.getElementById('dash-after-fixed').textContent = fmt(afterFixed);
-  document.getElementById('dash-goals').textContent     = fmt(goals);
-  document.getElementById('dash-free').textContent      = fmt(free);
+  document.getElementById('dash-drawerc').textContent     = fmt(drawerC);
+  document.getElementById('dash-c-atidiot').textContent   = fmt(cAtidiot);
+  document.getElementById('dash-c-biltam').textContent    = fmt(cBiltam);
+  document.getElementById('dash-c-hagshama').textContent  = fmt(cHagshama);
+  document.getElementById('dash-free').textContent        = fmt(free);
 
   var freeEl = document.getElementById('dash-result-row');
   if (freeEl) freeEl.className = free >= 0 ? 'grand-row' : 'deficit-row';
-  document.getElementById('dash-free').style.color     = free >= 0 ? '#065f46' : '#991b1b';
+  document.getElementById('dash-free').style.color       = free >= 0 ? '#065f46' : '#991b1b';
   document.getElementById('dash-free-label').textContent = free >= 0 ? '\uD83D\uDED2 מגירת הבזבוזים' : '\u26A0\uFE0F גירעון!';
   document.getElementById('dash-free-sub').textContent   = free >= 0 ? 'פנוי לחיים השוטפים' : 'ההוצאות עולות על ההכנסות';
-  document.getElementById('dash-per-day').textContent  = fmt(free / 30);
-  document.getElementById('dash-per-week').textContent = fmt(free / 4.33);
-  var pct = income > 0 ? Math.round(((goals + bd.periodic) / income) * 100) : 0;
+  document.getElementById('dash-per-day').textContent    = fmt(free / 30);
+  document.getElementById('dash-per-week').textContent   = fmt(free / 4.33);
+  var pct = income > 0 ? Math.round(((drawerC + bd.periodic) / income) * 100) : 0;
   document.getElementById('dash-pct').textContent = pct + '%';
 
   renderProgressBars();
+  updateProjectionUI();
 }
 
 // ── WIZARD ─────────────────────────────────────────────────────────────────
@@ -1500,10 +2203,12 @@ document.getElementById('wizard-backdrop').addEventListener('click', function(e)
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 loadState();
+buildTxnLookup();
 renderMonthChips();
 renderIncomeDrawers();
 renderFixedDrawers();
 renderVariableDrawers();
+renderDrawerCTab();
 renderGoalsTab();
 refreshDashboard();
 </script>
